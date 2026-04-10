@@ -9,7 +9,7 @@ interface NavigationProps {
 
 export default function Navigation({ currentView, onViewChange }: NavigationProps) {
   const items = [
-    { id: 'home', icon: Home, label: 'Início' },
+    { id: 'home', icon: Home, label: 'InÃ­cio' },
     { id: 'send', icon: Send, label: 'Enviar' },
     { id: 'receive', icon: Download, label: 'Receber' },
     { id: 'chat', icon: MessageSquareText, label: 'IA Chat' },
@@ -18,24 +18,26 @@ export default function Navigation({ currentView, onViewChange }: NavigationProp
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 glass-dark border-t border-white/5 px-2 py-3 flex justify-around items-center z-50 safe-area-bottom">
-      {items.map((item) => {
-        const Icon = item.icon;
-        const isActive = currentView === item.id;
-        return (
-          <button
-            key={item.id}
-            onClick={() => onViewChange(item.id as View)}
-            className={cn(
-              "flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all duration-200",
-              isActive ? "text-primary" : "text-zinc-500 hover:text-zinc-400"
-            )}
-          >
-            <Icon className={cn("w-5 h-5 mb-1", isActive && "fill-primary/10")} />
-            <span className="text-[9px] font-bold uppercase tracking-widest">{item.label}</span>
-          </button>
-        );
-      })}
+    <nav className="glass-dark border-t border-white/8 px-1 py-2 shrink-0">
+      <div className="grid grid-cols-6 gap-1">
+        {items.map((item) => {
+          const Icon = item.icon;
+          const isActive = currentView === item.id;
+          return (
+            <button
+              key={item.id}
+              onClick={() => onViewChange(item.id as View)}
+              className={cn(
+                'flex min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-1 py-1.5 transition-all duration-200',
+                isActive ? 'text-primary' : 'text-zinc-500 hover:text-zinc-400'
+              )}
+            >
+              <Icon className={cn('h-5 w-5 shrink-0', isActive && 'fill-primary/10')} />
+              <span className="truncate text-[8px] font-bold uppercase tracking-[0.18em]">{item.label}</span>
+            </button>
+          );
+        })}
+      </div>
     </nav>
   );
 }

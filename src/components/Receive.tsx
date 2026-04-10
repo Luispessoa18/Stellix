@@ -29,33 +29,35 @@ export default function Receive({ user }: ReceiveProps) {
   const handleCopy = () => {
     navigator.clipboard.writeText(user.email);
     setCopied(true);
-    toast.success('Chave copiada!');
+    toast.success('Chave ID copiada!');
     setTimeout(() => setCopied(false), 2000);
   };
 
   const qrValue = `stellar-pix:${user.email}${amount ? `?amount=${amount}` : ''}${selectedCurrency.id !== 'QUALQUER' ? `&currency=${selectedCurrency.id}` : ''}`;
 
   return (
-    <div className="flex flex-col h-full px-6 pt-8 pb-32 overflow-y-auto no-scrollbar">
+    <div className="flex flex-col h-full px-4 sm:px-6 pt-8 pb-32 overflow-y-auto no-scrollbar">
       <header className="mb-8">
         <h1 className="text-2xl font-bold mb-2">Receber</h1>
-        <p className="text-zinc-500 text-sm">Mostre o QR Code ou compartilhe sua chave para receber pagamentos instantâneos.</p>
+        <p className="text-zinc-500 text-sm">Mostre o QR Code ou compartilhe sua Chave ID para receber pagamentos instantÃ¢neos.</p>
       </header>
 
-      <Card className="p-6 flex flex-col items-center gap-4 rounded-3xl border-none shadow-xl shadow-zinc-200/50 bg-white">
-        <div className="p-3 bg-white rounded-2xl border border-zinc-100">
-          <QRCodeSVG 
-            value={qrValue} 
-            size={180} 
-            level="H"
-            includeMargin={false}
-            className="w-full h-full"
-          />
+      <Card className="p-4 sm:p-6 flex flex-col items-center gap-4 rounded-3xl border-none shadow-xl shadow-zinc-200/50 bg-white overflow-hidden">
+        <div className="w-full flex justify-center">
+          <div className="w-full max-w-[220px] aspect-square p-3 bg-white rounded-2xl border border-zinc-100">
+            <QRCodeSVG
+              value={qrValue}
+              size={220}
+              level="H"
+              includeMargin={false}
+              className="w-full h-full"
+            />
+          </div>
         </div>
-        
-        <div className="text-center space-y-1">
-          <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Sua chave Pix</p>
-          <p className="text-lg font-semibold text-zinc-900">{user.email}</p>
+
+        <div className="text-center space-y-1 w-full">
+          <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Sua Chave ID</p>
+          <p className="text-sm sm:text-lg font-semibold text-zinc-900 break-all">{user.email}</p>
           {selectedCurrency.id !== 'QUALQUER' && (
             <Badge variant="secondary" className="bg-primary/10 text-primary border-none mt-2">
               Somente {selectedCurrency.id}
@@ -63,12 +65,12 @@ export default function Receive({ user }: ReceiveProps) {
           )}
         </div>
 
-        <div className="flex gap-3 w-full">
-          <Button variant="outline" className="flex-1 h-11 rounded-xl gap-2 text-sm" onClick={handleCopy}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
+          <Button variant="outline" className="w-full h-11 rounded-xl gap-2 text-sm" onClick={handleCopy}>
             {copied ? <Check size={16} className="text-emerald-600" /> : <Copy size={16} />}
-            {copied ? 'Copiado' : 'Copiar'}
+            {copied ? 'Copiado' : 'Copiar Chave'}
           </Button>
-          <Button variant="outline" className="flex-1 h-11 rounded-xl gap-2 text-sm">
+          <Button variant="outline" className="w-full h-11 rounded-xl gap-2 text-sm">
             <Share2 size={16} />
             Compartilhar
           </Button>
@@ -99,7 +101,7 @@ export default function Receive({ user }: ReceiveProps) {
         </div>
 
         <div className="space-y-4">
-          <h2 className="text-sm font-bold text-zinc-400 uppercase tracking-wider">Solicitar valor específico</h2>
+          <h2 className="text-sm font-bold text-zinc-400 uppercase tracking-wider">Solicitar valor especÃ­fico</h2>
           <div className="relative">
             <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-zinc-400">$</span>
             <Input
@@ -111,7 +113,7 @@ export default function Receive({ user }: ReceiveProps) {
             />
           </div>
           {amount && (
-            <motion.p 
+            <motion.p
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               className="text-xs text-zinc-400 font-medium px-1"
@@ -127,8 +129,8 @@ export default function Receive({ user }: ReceiveProps) {
               <Download size={18} />
             </div>
             <div className="space-y-1">
-              <p className="text-sm font-bold text-emerald-900">Transferência Grátis</p>
-              <p className="text-xs text-emerald-700/80">Você não paga nada para receber. O dinheiro cai na hora na sua conta.</p>
+              <p className="text-sm font-bold text-emerald-900">TransferÃªncia GrÃ¡tis</p>
+              <p className="text-xs text-emerald-700/80">VocÃª nÃ£o paga nada para receber. O dinheiro cai na hora na sua conta.</p>
             </div>
           </div>
         </div>

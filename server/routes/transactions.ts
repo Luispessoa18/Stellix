@@ -2,12 +2,11 @@ import { Router } from 'express';
 import { randomUUID } from 'crypto';
 import { db } from '../db.js';
 import { authMiddleware, type AuthRequest } from '../middleware/auth.js';
-import { sendPayment } from '../../stellar/index.js';
+import { getXlmPrice, sendPayment } from '../../stellar/index.js';
 
 const router = Router();
 router.use(authMiddleware);
 
-// GET /api/transactions
 router.get('/', async (req: AuthRequest, res) => {
   const result = await db.execute({
     sql: 'SELECT * FROM transactions WHERE user_id = ? ORDER BY created_at DESC LIMIT 50',
@@ -29,12 +28,11 @@ router.get('/', async (req: AuthRequest, res) => {
   res.json(formatted);
 });
 
-// POST /api/transactions/send
 router.post('/send', async (req: AuthRequest, res) => {
   const { amount, currency, recipientAddress, recipientName } = req.body;
 
   if (!amount || !currency || !recipientAddress) {
-    res.status(400).json({ error: 'amount, currency e recipientAddress são obrigatórios' });
+    res.status(400).json({ error: 'amount, currency e recipientAddress sÃ£o obrigatÃ³rios' });
     return;
   }
 
@@ -42,11 +40,21 @@ router.post('/send', async (req: AuthRequest, res) => {
   const user = userResult.rows[0] as any;
 
   if (!user) {
-    res.status(404).json({ error: 'Usuário não encontrado' });
+    res.status(404).json({ error: 'UsuÃ¡rio nÃ£o encontrado' });
     return;
   }
 
-  if (Number(user.balance) < amount) {
+  let usdPriceAtTime: number | null = null;
+  let balanceDebit = Number(amount);
+
+  if (currency.toUpperCase() === 'XLM') {
+    usdPriceAtTime = await getXlmPrice();
+    if (usdPriceAtTime > 0) {
+      balanceDebit = Number(amount) * usdPriceAtTime;
+    }
+  }
+
+  if (Number(user.balance) < balanceDebit) {
     res.status(400).json({ error: 'Saldo insuficiente' });
     return;
   }
@@ -67,20 +75,20 @@ router.post('/send', async (req: AuthRequest, res) => {
   } catch (err) {
     console.error('Stellar send failed:', err);
     status = 'failed';
-    res.status(500).json({ error: 'Falha ao processar transação na rede Stellar' });
+    res.status(500).json({ error: 'Falha ao processar transaÃ§Ã£o na rede Stellar' });
     return;
   }
 
   const txId = randomUUID();
   await db.execute({
-    sql: `INSERT INTO transactions (id, user_id, type, amount, currency, counterparty, counterparty_address, stellar_tx_hash, status)
-          VALUES (?, ?, 'send', ?, ?, ?, ?, ?, ?)`,
-    args: [txId, req.userId!, amount, currency, recipientName || recipientAddress, recipientAddress, stellarTxHash, status],
+    sql: `INSERT INTO transactions (id, user_id, type, amount, currency, counterparty, counterparty_address, stellar_tx_hash, status, usd_price_at_time)
+          VALUES (?, ?, 'send', ?, ?, ?, ?, ?, ?, ?)`,
+    args: [txId, req.userId!, amount, currency, recipientName || recipientAddress, recipientAddress, stellarTxHash, status, usdPriceAtTime],
   });
 
   await db.execute({
     sql: 'UPDATE users SET balance = balance - ? WHERE id = ?',
-    args: [amount, req.userId!],
+    args: [balanceDebit, req.userId!],
   });
 
   res.json({
@@ -92,6 +100,7 @@ router.post('/send', async (req: AuthRequest, res) => {
     timestamp: Date.now(),
     status,
     stellarTxHash,
+    usdPriceAtTime,
   });
 });
 

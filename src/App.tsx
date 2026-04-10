@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Toaster } from '@/components/ui/sonner';
 import { View, Transaction, User } from './types';
 import Navigation from './components/Navigation';
@@ -47,6 +47,19 @@ export default function App() {
   const [authView, setAuthView] = useState<'login' | 'signup'>('login');
   const [user, setUser] = useState<User>(EMPTY_USER);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [xlmUsd, setXlmUsd] = useState(0);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setXlmUsd(0);
+      return;
+    }
+
+    fetch('/api/stellar/price')
+      .then((r) => r.json())
+      .then((d) => setXlmUsd(Number(d.xlmUsd) || 0))
+      .catch(() => setXlmUsd(0));
+  }, [isAuthenticated]);
 
   const handleLogin = async (email: string, password: string) => {
     try {
@@ -66,10 +79,10 @@ export default function App() {
         setIsAuthenticated(true);
         toast.success('Bem-vindo de volta!');
       } else {
-        toast.error(data.error || 'Email ou senha inválidos');
+        toast.error(data.error || 'Email ou senha invÃ¡lidos');
       }
     } catch {
-      toast.error('Servidor indisponível. Verifique sua conexão.');
+      toast.error('Servidor indisponÃ­vel. Verifique sua conexÃ£o.');
     }
   };
 
@@ -93,7 +106,7 @@ export default function App() {
         toast.error(data.error || 'Erro ao criar conta');
       }
     } catch {
-      toast.error('Servidor indisponível. Verifique sua conexão.');
+      toast.error('Servidor indisponÃ­vel. Verifique sua conexÃ£o.');
     }
   };
 
@@ -107,6 +120,8 @@ export default function App() {
   };
 
   const handleSendSuccess = (amount: number, recipient: string, currency: string) => {
+    const usdAmount = currency === 'XLM' && xlmUsd > 0 ? amount * xlmUsd : amount;
+
     const newTx: Transaction = {
       id: Math.random().toString(36).substr(2, 9),
       type: 'send',
@@ -115,9 +130,11 @@ export default function App() {
       counterparty: recipient,
       timestamp: Date.now(),
       status: 'completed',
+      usdPriceAtTime: currency === 'XLM' && xlmUsd > 0 ? xlmUsd : undefined,
     };
+
     setTransactions((prev) => [newTx, ...prev]);
-    setUser((prev) => ({ ...prev, balance: prev.balance - amount }));
+    setUser((prev) => ({ ...prev, balance: prev.balance - usdAmount }));
   };
 
   if (!isAuthenticated) {
@@ -175,7 +192,7 @@ export default function App() {
 
   return (
     <div className="max-w-md mx-auto h-screen bg-[#0c0f1a] text-white shadow-2xl relative overflow-hidden flex flex-col">
-      <main className="flex-1 overflow-hidden relative">
+      <main className="flex-1 min-h-0 relative">
         <AnimatePresence mode="wait">
           <motion.div
             key={currentView}
