@@ -13,6 +13,47 @@ export const db = createClient({
   url: `file:${DB_PATH}`,
 });
 
+async function runOffchainXlmBalanceFix() {
+  const migrationKey = 'fix_offchain_xlm_balance_v1';
+
+  const existing = await db.execute({
+    sql: 'SELECT value FROM app_meta WHERE key = ?',
+    args: [migrationKey],
+  });
+
+  if (existing.rows.length > 0) return;
+
+  const rows = await db.execute({
+    sql: `
+      SELECT user_id, COALESCE(SUM(amount), 0) AS total_xlm_credit
+      FROM transactions
+      WHERE status = 'completed'
+        AND type = 'deposit'
+        AND currency = 'XLM'
+        AND counterparty = 'Admin Credit'
+        AND (stellar_tx_hash IS NULL OR stellar_tx_hash = '')
+      GROUP BY user_id
+    `,
+    args: [],
+  });
+
+  for (const row of rows.rows as any[]) {
+    const userId = Number(row.user_id);
+    const totalXlmCredit = Number(row.total_xlm_credit) || 0;
+    if (totalXlmCredit <= 0) continue;
+
+    await db.execute({
+      sql: 'UPDATE users SET balance = MAX(balance - ?, 0) WHERE id = ?',
+      args: [totalXlmCredit, userId],
+    });
+  }
+
+  await db.execute({
+    sql: 'INSERT INTO app_meta (key, value) VALUES (?, ?)',
+    args: [migrationKey, new Date().toISOString()],
+  });
+}
+
 export async function initDb() {
   await db.executeMultiple(`
     CREATE TABLE IF NOT EXISTS users (
@@ -59,10 +100,17 @@ export async function initDb() {
       key_value   TEXT    NOT NULL UNIQUE,
       created_at  TEXT    DEFAULT (datetime('now'))
     );
+
+    CREATE TABLE IF NOT EXISTS app_meta (
+      key         TEXT PRIMARY KEY,
+      value       TEXT
+    );
   `);
-  // Migrações não-destrutivas — ignoram erro se coluna já existir
+
   try { await db.execute({ sql: 'ALTER TABLE transactions ADD COLUMN usd_price_at_time REAL', args: [] }); } catch {}
-  console.log('  ✅ Banco de dados inicializado');
+
+  await runOffchainXlmBalanceFix();
+  console.log('  Banco de dados inicializado');
 }
 
 export default db;

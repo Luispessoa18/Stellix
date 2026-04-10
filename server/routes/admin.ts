@@ -6,13 +6,12 @@ import { sendPayment, getAccountBalance, getXlmPrice } from '../../stellar/index
 
 const router = Router();
 
-// POST /api/admin/login
 router.post('/login', (req, res) => {
   const { secret } = req.body;
   const ADMIN_SECRET = process.env.ADMIN_SECRET;
 
   if (!ADMIN_SECRET) {
-    res.status(500).json({ error: 'ADMIN_SECRET não configurado no servidor' });
+    res.status(500).json({ error: 'ADMIN_SECRET nao configurado no servidor' });
     return;
   }
   if (!secret || secret !== ADMIN_SECRET) {
@@ -23,14 +22,12 @@ router.post('/login', (req, res) => {
   res.json({ token: signAdminToken() });
 });
 
-// Todas as rotas abaixo exigem JWT de admin
 router.use(adminAuthMiddleware);
 
-// GET /api/admin/master-balance
 router.get('/master-balance', async (_req, res) => {
   const publicKey = process.env.STELLAR_PUBLIC_KEY;
   if (!publicKey) {
-    res.json({ balances: [], publicKey: null, error: 'STELLAR_PUBLIC_KEY não configurado' });
+    res.json({ balances: [], publicKey: null, error: 'STELLAR_PUBLIC_KEY nao configurado' });
     return;
   }
   try {
@@ -41,7 +38,6 @@ router.get('/master-balance', async (_req, res) => {
   }
 });
 
-// GET /api/admin/stats
 router.get('/stats', async (_req, res) => {
   const [usersRow, txRow] = await Promise.all([
     db.execute({ sql: 'SELECT COUNT(*) as count, COALESCE(SUM(balance),0) as total_balance FROM users', args: [] }),
@@ -56,7 +52,6 @@ router.get('/stats', async (_req, res) => {
   });
 });
 
-// GET /api/admin/users
 router.get('/users', async (_req, res) => {
   const result = await db.execute({
     sql: 'SELECT id, name, email, phone, balance, currency, stellar_public_key, created_at FROM users ORDER BY created_at DESC',
@@ -75,7 +70,6 @@ router.get('/users', async (_req, res) => {
   })));
 });
 
-// GET /api/admin/transactions
 router.get('/transactions', async (_req, res) => {
   const result = await db.execute({
     sql: `SELECT t.*, u.name as user_name, u.email as user_email
@@ -102,15 +96,11 @@ router.get('/transactions', async (_req, res) => {
   })));
 });
 
-// POST /api/admin/credit
-// Body: { userId, amount, asset, onChain }
-// onChain=true → envia XLM/USDC via Stellar da conta admin para a carteira do usuário
-// onChain=false → apenas atualiza o saldo no banco (crédito off-chain)
 router.post('/credit', async (req, res) => {
   const { userId, amount, asset = 'XLM', onChain = false } = req.body;
 
   if (!userId || !amount || Number(amount) <= 0) {
-    res.status(400).json({ error: 'userId e amount são obrigatórios' });
+    res.status(400).json({ error: 'userId e amount sao obrigatorios' });
     return;
   }
 
@@ -118,14 +108,13 @@ router.post('/credit', async (req, res) => {
   const user = userResult.rows[0] as any;
 
   if (!user) {
-    res.status(404).json({ error: 'Usuário não encontrado' });
+    res.status(404).json({ error: 'Usuario nao encontrado' });
     return;
   }
 
   let stellarTxHash = '';
   let usdPriceAtTime: number | null = null;
 
-  // Para XLM, registra o preço no momento da transação
   if (asset.toUpperCase() === 'XLM') {
     usdPriceAtTime = await getXlmPrice();
   }
@@ -133,11 +122,11 @@ router.post('/credit', async (req, res) => {
   if (onChain) {
     const adminSecret = process.env.STELLAR_SECRET_KEY;
     if (!adminSecret) {
-      res.status(400).json({ error: 'STELLAR_SECRET_KEY não configurado no .env' });
+      res.status(400).json({ error: 'STELLAR_SECRET_KEY nao configurado no .env' });
       return;
     }
     if (!user.stellar_public_key) {
-      res.status(400).json({ error: 'Usuário não possui carteira Stellar cadastrada' });
+      res.status(400).json({ error: 'Usuario nao possui carteira Stellar cadastrada' });
       return;
     }
     try {
@@ -150,17 +139,13 @@ router.post('/credit', async (req, res) => {
       });
       stellarTxHash = result.hash;
     } catch (err: any) {
-      res.status(500).json({ error: `Falha na transação Stellar: ${err.message}` });
+      res.status(500).json({ error: `Falha na transacao Stellar: ${err.message}` });
       return;
     }
   }
 
-  // Só atualiza o saldo USD no banco se:
-  // - off-chain (crédito manual de teste, sempre em USD)
-  // - on-chain com USDC ou USDT (stablecoins 1:1 com USD)
-  // XLM on-chain NÃO altera o saldo USD — são ativos diferentes
   const isStablecoin = ['USDC', 'USDT'].includes(asset.toUpperCase());
-  const shouldUpdateBalance = !onChain || isStablecoin;
+  const shouldUpdateBalance = isStablecoin;
 
   if (shouldUpdateBalance) {
     await db.execute({
@@ -187,9 +172,11 @@ router.post('/credit', async (req, res) => {
     newBalance,
     message: onChain
       ? isStablecoin
-        ? `${amount} ${asset} enviados on-chain → saldo USD atualizado`
-        : `${amount} ${asset} enviados on-chain (XLM não altera saldo USD)`
-      : `$${amount} creditados diretamente no saldo de ${user.name}`,
+        ? `${amount} ${asset} enviados on-chain e saldo USD atualizado`
+        : `${amount} ${asset} enviados on-chain sem alterar saldo USD`
+      : shouldUpdateBalance
+        ? `$${amount} creditados diretamente no saldo de ${user.name}`
+        : `${amount} ${asset} registrados sem alterar o saldo USD`,
   });
 });
 
