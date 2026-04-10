@@ -1,0 +1,16 @@
+# Env files (sensível)
+.env
+.env.*
+
+# Claude (AI config / local files)
+.claude
+
+# Node (se estiver usando)
+node_modules/
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db

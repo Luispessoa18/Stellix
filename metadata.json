@@ -1,0 +1,5 @@
+{
+  "name": "DolarPix",
+  "description": "Sistema de pagamentos instantâneos em dólar via rede Stellar. Simples, rápido e sem taxas de rede visíveis.",
+  "requestFramePermissions": []
+}

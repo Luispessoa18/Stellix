@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(tasklist)",
+      "Bash(node -e \"require\\('@libsql/client'\\); console.log\\('libsql OK'\\)\")",
+      "Bash(node -e \"require\\('bcryptjs'\\); console.log\\('bcryptjs OK'\\)\")",
+      "Bash(node -e \"require\\('jsonwebtoken'\\); console.log\\('jwt OK'\\)\")",
+      "Bash(npx tsc:*)"
+    ]
+  }
+}
