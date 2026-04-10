@@ -108,6 +108,9 @@ export async function initDb() {
   `);
 
   try { await db.execute({ sql: 'ALTER TABLE transactions ADD COLUMN usd_price_at_time REAL', args: [] }); } catch {}
+  try { await db.execute({ sql: 'ALTER TABLE contacts ADD COLUMN linked_user_id INTEGER', args: [] }); } catch {}
+  try { await db.execute({ sql: 'ALTER TABLE users ADD COLUMN latitude REAL', args: [] }); } catch {}
+  try { await db.execute({ sql: 'ALTER TABLE users ADD COLUMN longitude REAL', args: [] }); } catch {}
 
   await runOffchainXlmBalanceFix();
   console.log('  Banco de dados inicializado');

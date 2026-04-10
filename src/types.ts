@@ -8,7 +8,7 @@ export interface Transaction {
   counterparty: string;
   timestamp: number;
   status: 'completed' | 'pending' | 'failed';
-  usdPriceAtTime?: number;  // preço XLM/USD no momento da transação
+  usdPriceAtTime?: number;
 }
 
 export interface Asset {
@@ -20,6 +20,7 @@ export interface Asset {
 }
 
 export interface User {
+  id?: number;
   name: string;
   email: string;
   phone: string;
@@ -40,6 +41,13 @@ export interface Contact {
   identifier: string;
   stellarPublicKey: string;
   createdAt: string;
+  linkedUserId?: number | null;
+}
+
+export interface NearbyContact {
+  userId: number;
+  firstName: string;
+  distanceKm: number;
 }
 
 export interface PaymentKey {

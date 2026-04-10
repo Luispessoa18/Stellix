@@ -86,12 +86,12 @@ export default function App() {
     }
   };
 
-  const handleSignup = async (name: string, email: string, phone: string, password: string) => {
+  const handleSignup = async (name: string, email: string, phone: string, password: string, currency: string) => {
     try {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, phone, password }),
+        body: JSON.stringify({ name, email, phone, password, currency }),
       });
 
       const data = await res.json();
@@ -117,6 +117,10 @@ export default function App() {
     setAuthView('login');
     setUser(EMPTY_USER);
     setTransactions([]);
+  };
+
+  const handleUserUpdate = (nextUser: Partial<User>) => {
+    setUser((prev) => ({ ...prev, ...nextUser }));
   };
 
   const handleSendSuccess = (amount: number, recipient: string, currency: string) => {
@@ -174,9 +178,9 @@ export default function App() {
       case 'chat':
         return <AIChat user={user} transactions={transactions} onExecuteTransaction={handleSendSuccess} />;
       case 'assets':
-        return <Assets balance={user.balance} />;
+        return <Assets balance={user.balance} currency={user.currency} />;
       case 'profile':
-        return <Profile user={user} onLogout={handleLogout} />;
+        return <Profile user={user} onLogout={handleLogout} onUserUpdate={handleUserUpdate} />;
       default:
         return <Home user={user} transactions={transactions} onAction={(v) => setCurrentView(v as View)} />;
     }

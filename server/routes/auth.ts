@@ -6,24 +6,22 @@ import { createStellarAccount } from '../../stellar/index.js';
 
 const router = Router();
 
-// POST /api/auth/register
 router.post('/register', async (req, res) => {
-  const { name, email, phone, password } = req.body;
+  const { name, email, phone, password, currency = 'USD' } = req.body;
 
   if (!name || !email || !password) {
-    res.status(400).json({ error: 'Nome, email e senha são obrigatórios' });
+    res.status(400).json({ error: 'Nome, email e senha sao obrigatorios' });
     return;
   }
 
   const existing = await db.execute({ sql: 'SELECT id FROM users WHERE email = ?', args: [email] });
   if (existing.rows.length > 0) {
-    res.status(409).json({ error: 'Este email já está cadastrado' });
+    res.status(409).json({ error: 'Este email ja esta cadastrado' });
     return;
   }
 
   const passwordHash = await bcrypt.hash(password, 10);
 
-  // Cria conta Stellar no testnet
   let stellarPublicKey = '';
   let stellarSecretKey = '';
   try {
@@ -31,13 +29,13 @@ router.post('/register', async (req, res) => {
     stellarPublicKey = account.publicKey;
     stellarSecretKey = account.secretKey;
   } catch (err) {
-    console.error('Stellar account creation failed (continuing without it):', err);
+    console.error('Stellar account creation failed:', err);
   }
 
   const result = await db.execute({
-    sql: `INSERT INTO users (name, email, phone, password, stellar_public_key, stellar_secret_key, balance)
-          VALUES (?, ?, ?, ?, ?, ?, 0)`,
-    args: [name, email, phone || null, passwordHash, stellarPublicKey, stellarSecretKey],
+    sql: `INSERT INTO users (name, email, phone, password, stellar_public_key, stellar_secret_key, balance, currency)
+          VALUES (?, ?, ?, ?, ?, ?, 0, ?)`,
+    args: [name, email, phone || null, passwordHash, stellarPublicKey, stellarSecretKey, currency],
   });
 
   const userId = Number(result.lastInsertRowid);
@@ -51,7 +49,7 @@ router.post('/register', async (req, res) => {
       email,
       phone: phone || '',
       balance: 0,
-      currency: 'USD',
+      currency,
       stellarPublicKey,
       assets: [
         { id: 'USDC', name: 'USD Coin', amount: 0, icon: 'https://cryptologos.cc/logos/usd-coin-usdc-logo.png' },
@@ -61,12 +59,11 @@ router.post('/register', async (req, res) => {
   });
 });
 
-// POST /api/auth/login
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
 
   if (!email || !password) {
-    res.status(400).json({ error: 'Email e senha são obrigatórios' });
+    res.status(400).json({ error: 'Email e senha sao obrigatorios' });
     return;
   }
 
@@ -74,13 +71,13 @@ router.post('/login', async (req, res) => {
   const user = result.rows[0] as any;
 
   if (!user) {
-    res.status(401).json({ error: 'Email ou senha inválidos' });
+    res.status(401).json({ error: 'Email ou senha invalidos' });
     return;
   }
 
   const valid = await bcrypt.compare(password, user.password as string);
   if (!valid) {
-    res.status(401).json({ error: 'Email ou senha inválidos' });
+    res.status(401).json({ error: 'Email ou senha invalidos' });
     return;
   }
 
@@ -95,7 +92,7 @@ router.post('/login', async (req, res) => {
       email: user.email,
       phone: user.phone || '',
       balance: Number(user.balance),
-      currency: user.currency,
+      currency: user.currency || 'USD',
       stellarPublicKey: user.stellar_public_key,
       assets: [
         { id: 'USDC', name: 'USD Coin', amount: Number(user.balance), icon: 'https://cryptologos.cc/logos/usd-coin-usdc-logo.png' },

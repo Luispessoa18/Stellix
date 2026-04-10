@@ -1,46 +1,60 @@
 import React, { useState, useEffect } from 'react';
-import { User, Settings, Shield, Bell, HelpCircle, LogOut, ChevronRight, Smartphone, Mail, Key, Plus, Copy, Trash2, Check, Hash } from 'lucide-react';
+import { Settings, Shield, Bell, HelpCircle, LogOut, ChevronRight, Smartphone, Mail, Key, Plus, Copy, Trash2, Check, Hash, Coins } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { PaymentKey } from '../types';
+import { PaymentKey, User } from '../types';
 
 interface ProfileProps {
-  user: { name: string; email: string; phone: string };
+  user: User;
   onLogout?: () => void;
+  onUserUpdate?: (user: Partial<User>) => void;
 }
 
 function getToken() { return localStorage.getItem('token') || ''; }
 const HEADERS = () => ({ Authorization: `Bearer ${getToken()}`, 'Content-Type': 'application/json' });
 
-const KEY_LABELS: Record<string, { label: string; icon: React.ElementType; color: string; bg: string }> = {
-  email:  { label: 'Email',           icon: Mail,       color: 'text-blue-400',    bg: 'rgba(59,130,246,0.12)'  },
-  phone:  { label: 'Telefone',        icon: Smartphone, color: 'text-emerald-400', bg: 'rgba(52,211,153,0.12)'  },
-  random: { label: 'Chave Aleatória', icon: Hash,       color: 'text-purple-400',  bg: 'rgba(167,139,250,0.12)' },
+const KEY_LABELS: Record<string, { label: string; color: string; bg: string }> = {
+  email: { label: 'Email', color: 'text-blue-400', bg: 'rgba(59,130,246,0.12)' },
+  phone: { label: 'Telefone', color: 'text-emerald-400', bg: 'rgba(52,211,153,0.12)' },
+  random: { label: 'Chave aleatoria', color: 'text-purple-400', bg: 'rgba(167,139,250,0.12)' },
 };
 
-export default function Profile({ user, onLogout }: ProfileProps) {
+const CURRENCIES = [
+  { id: 'BRL', label: 'Real brasileiro' },
+  { id: 'USD', label: 'Dolar americano' },
+  { id: 'EUR', label: 'Euro' },
+  { id: 'GBP', label: 'Libra' },
+];
+
+export default function Profile({ user, onLogout, onUserUpdate }: ProfileProps) {
   const [keys, setKeys] = useState<PaymentKey[]>([]);
   const [loadingKeys, setLoadingKeys] = useState(true);
   const [creating, setCreating] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<number | null>(null);
+  const [preferredCurrency, setPreferredCurrency] = useState(user.currency || 'USD');
+  const [savingCurrency, setSavingCurrency] = useState(false);
 
   const menuItems = [
-    { icon: Shield,      label: 'Segurança e PIN',   sub: 'Biometria ativa' },
-    { icon: Bell,        label: 'Notificações',       sub: 'Push e Email' },
-    { icon: Settings,    label: 'Configurações',      sub: 'Idioma, Moeda base' },
-    { icon: HelpCircle,  label: 'Ajuda e Suporte',    sub: 'Chat 24h' },
+    { icon: Shield, label: 'Seguranca e PIN', sub: 'Biometria ativa' },
+    { icon: Bell, label: 'Notificacoes', sub: 'Push e email' },
+    { icon: Settings, label: 'Configuracoes', sub: 'Moeda principal e ajustes' },
+    { icon: HelpCircle, label: 'Ajuda e suporte', sub: 'Chat 24h' },
   ];
 
   useEffect(() => {
+    setPreferredCurrency(user.currency || 'USD');
+  }, [user.currency]);
+
+  useEffect(() => {
     fetch('/api/profile/keys', { headers: HEADERS() })
-      .then(r => r.json())
+      .then((r) => r.json())
       .then(setKeys)
       .catch(() => {})
       .finally(() => setLoadingKeys(false));
   }, []);
 
-  const hasKeyOfType = (type: string) => keys.some(k => k.type === type);
+  const hasKeyOfType = (type: string) => keys.some((k) => k.type === type);
 
   const createKey = async (type: 'email' | 'phone' | 'random') => {
     setCreating(type);
@@ -52,7 +66,7 @@ export default function Profile({ user, onLogout }: ProfileProps) {
       });
       const data = await res.json();
       if (res.ok) {
-        setKeys(prev => [...prev, data]);
+        setKeys((prev) => [...prev, data]);
         toast.success('Chave criada com sucesso!');
       } else {
         toast.error(data.error || 'Erro ao criar chave');
@@ -64,7 +78,7 @@ export default function Profile({ user, onLogout }: ProfileProps) {
 
   const deleteKey = async (id: number) => {
     await fetch(`/api/profile/keys/${id}`, { method: 'DELETE', headers: HEADERS() });
-    setKeys(prev => prev.filter(k => k.id !== id));
+    setKeys((prev) => prev.filter((k) => k.id !== id));
     toast.success('Chave removida');
   };
 
@@ -75,11 +89,30 @@ export default function Profile({ user, onLogout }: ProfileProps) {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const initials = user.name.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase();
+  const saveCurrency = async () => {
+    setSavingCurrency(true);
+    try {
+      const res = await fetch('/api/profile/preferences', {
+        method: 'PATCH',
+        headers: HEADERS(),
+        body: JSON.stringify({ currency: preferredCurrency }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        onUserUpdate?.({ currency: data.currency });
+        toast.success('Moeda principal atualizada');
+      } else {
+        toast.error(data.error || 'Erro ao salvar moeda');
+      }
+    } finally {
+      setSavingCurrency(false);
+    }
+  };
+
+  const initials = user.name.split(' ').slice(0, 2).map((n) => n[0]).join('').toUpperCase();
 
   return (
     <div className="flex flex-col h-full px-6 pt-12 pb-24 overflow-y-auto no-scrollbar">
-      {/* Avatar */}
       <div className="flex flex-col items-center mb-8">
         <div className="relative mb-4">
           <Avatar className="w-24 h-24 border-4 border-blue-400/20 shadow-2xl">
@@ -94,7 +127,6 @@ export default function Profile({ user, onLogout }: ProfileProps) {
       </div>
 
       <div className="space-y-6">
-        {/* Info pessoal */}
         <div className="glass rounded-3xl border border-white/5 overflow-hidden">
           <div className="p-4 flex items-center gap-4">
             <div className="w-10 h-10 rounded-xl glass-dark flex items-center justify-center text-white/40">
@@ -121,7 +153,31 @@ export default function Profile({ user, onLogout }: ProfileProps) {
           )}
         </div>
 
-        {/* Chaves de recebimento */}
+        <div className="rounded-3xl border border-white/8 bg-white/5 p-4 space-y-3">
+          <div className="flex items-center gap-2 text-white/70">
+            <Coins size={16} />
+            <p className="text-[10px] font-bold uppercase tracking-widest">Moeda principal</p>
+          </div>
+          <select
+            value={preferredCurrency}
+            onChange={(e) => setPreferredCurrency(e.target.value)}
+            className="w-full h-12 rounded-2xl border border-white/10 bg-[#111827] px-4 text-sm text-white outline-none"
+          >
+            {CURRENCIES.map((currency) => (
+              <option key={currency.id} value={currency.id} className="text-zinc-900">
+                {currency.label}
+              </option>
+            ))}
+          </select>
+          <Button
+            onClick={saveCurrency}
+            disabled={savingCurrency || preferredCurrency === user.currency}
+            className="w-full rounded-2xl"
+          >
+            {savingCurrency ? 'Salvando...' : 'Salvar moeda principal'}
+          </Button>
+        </div>
+
         <div className="space-y-3">
           <div className="flex items-center justify-between px-1">
             <h3 className="text-[10px] font-bold text-white/40 uppercase tracking-widest flex items-center gap-1.5">
@@ -131,39 +187,41 @@ export default function Profile({ user, onLogout }: ProfileProps) {
             <span className="text-[9px] text-white/20">Para receber pagamentos</span>
           </div>
 
-          {/* Existing keys */}
           {loadingKeys ? (
             <div className="space-y-2">
-              {[1, 2].map(i => (
+              {[1, 2].map((i) => (
                 <div key={i} className="h-16 rounded-2xl animate-pulse" style={{ background: 'rgba(255,255,255,0.04)' }} />
               ))}
             </div>
           ) : keys.length > 0 ? (
             <div className="space-y-2">
-              {keys.map(k => {
+              {keys.map((k) => {
                 const meta = KEY_LABELS[k.type] || KEY_LABELS.random;
-                const Icon = meta.icon;
                 return (
-                  <div key={k.id} className="flex items-center gap-3 p-3.5 rounded-2xl"
-                    style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
-                    <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-                      style={{ background: meta.bg }}>
-                      <Icon size={16} className={meta.color} />
+                  <div
+                    key={k.id}
+                    className="flex items-center gap-3 p-3.5 rounded-2xl"
+                    style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}
+                  >
+                    <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: meta.bg }}>
+                      {k.type === 'email' ? <Mail size={16} className={meta.color} /> : k.type === 'phone' ? <Smartphone size={16} className={meta.color} /> : <Hash size={16} className={meta.color} />}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-[9px] font-bold text-white/40 uppercase tracking-widest">{meta.label}</p>
                       <p className="text-sm font-mono text-white/80 truncate">{k.keyValue}</p>
                     </div>
                     <div className="flex gap-1 shrink-0">
-                      <button onClick={() => copyKey(k)}
+                      <button
+                        onClick={() => copyKey(k)}
                         className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors"
-                        style={{ background: copiedId === k.id ? 'rgba(52,211,153,0.15)' : 'rgba(255,255,255,0.06)' }}>
-                        {copiedId === k.id
-                          ? <Check size={14} className="text-emerald-400" />
-                          : <Copy size={14} className="text-white/40" />}
+                        style={{ background: copiedId === k.id ? 'rgba(52,211,153,0.15)' : 'rgba(255,255,255,0.06)' }}
+                      >
+                        {copiedId === k.id ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} className="text-white/40" />}
                       </button>
-                      <button onClick={() => deleteKey(k.id)}
-                        className="w-8 h-8 rounded-lg flex items-center justify-center text-red-400/40 hover:text-red-400 hover:bg-red-400/10 transition-colors">
+                      <button
+                        onClick={() => deleteKey(k.id)}
+                        className="w-8 h-8 rounded-lg flex items-center justify-center text-red-400/40 hover:text-red-400 hover:bg-red-400/10 transition-colors"
+                      >
                         <Trash2 size={14} />
                       </button>
                     </div>
@@ -172,42 +230,48 @@ export default function Profile({ user, onLogout }: ProfileProps) {
               })}
             </div>
           ) : (
-            <div className="py-6 text-center text-white/20 text-sm rounded-2xl"
-              style={{ border: '1px dashed rgba(255,255,255,0.10)' }}>
+            <div className="py-6 text-center text-white/20 text-sm rounded-2xl" style={{ border: '1px dashed rgba(255,255,255,0.10)' }}>
               Nenhuma chave cadastrada ainda
             </div>
           )}
 
-          {/* Add key buttons */}
           <div className="flex gap-2 flex-wrap">
             {!hasKeyOfType('email') && user.email && (
-              <button onClick={() => createKey('email')} disabled={creating === 'email'}
+              <button
+                onClick={() => createKey('email')}
+                disabled={creating === 'email'}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-blue-400 disabled:opacity-50 transition-opacity"
-                style={{ background: 'rgba(59,130,246,0.10)', border: '1px solid rgba(59,130,246,0.20)' }}>
+                style={{ background: 'rgba(59,130,246,0.10)', border: '1px solid rgba(59,130,246,0.20)' }}
+              >
                 <Plus size={13} />
                 {creating === 'email' ? 'Criando...' : '+ Email'}
               </button>
             )}
             {!hasKeyOfType('phone') && user.phone && (
-              <button onClick={() => createKey('phone')} disabled={creating === 'phone'}
+              <button
+                onClick={() => createKey('phone')}
+                disabled={creating === 'phone'}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-emerald-400 disabled:opacity-50 transition-opacity"
-                style={{ background: 'rgba(52,211,153,0.10)', border: '1px solid rgba(52,211,153,0.20)' }}>
+                style={{ background: 'rgba(52,211,153,0.10)', border: '1px solid rgba(52,211,153,0.20)' }}
+              >
                 <Plus size={13} />
                 {creating === 'phone' ? 'Criando...' : '+ Telefone'}
               </button>
             )}
-            <button onClick={() => createKey('random')} disabled={creating === 'random'}
+            <button
+              onClick={() => createKey('random')}
+              disabled={creating === 'random'}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-purple-400 disabled:opacity-50 transition-opacity"
-              style={{ background: 'rgba(167,139,250,0.10)', border: '1px solid rgba(167,139,250,0.20)' }}>
+              style={{ background: 'rgba(167,139,250,0.10)', border: '1px solid rgba(167,139,250,0.20)' }}
+            >
               <Hash size={13} />
-              {creating === 'random' ? 'Gerando...' : '+ Chave Aleatória'}
+              {creating === 'random' ? 'Gerando...' : '+ Chave aleatoria'}
             </button>
           </div>
         </div>
 
-        {/* Menu */}
         <div className="space-y-3">
-          <h3 className="text-[10px] font-bold text-white/40 uppercase tracking-widest px-1">Preferências</h3>
+          <h3 className="text-[10px] font-bold text-white/40 uppercase tracking-widest px-1">Preferencias</h3>
           <div className="glass rounded-3xl border border-white/5 overflow-hidden">
             {menuItems.map((item, i) => (
               <div key={item.label}>
@@ -229,8 +293,7 @@ export default function Profile({ user, onLogout }: ProfileProps) {
           </div>
         </div>
 
-        <Button onClick={onLogout} variant="ghost"
-          className="w-full h-14 rounded-3xl text-rose-400 font-bold gap-2 hover:bg-rose-500/10 hover:text-rose-300">
+        <Button onClick={onLogout} variant="ghost" className="w-full h-14 rounded-3xl text-rose-400 font-bold gap-2 hover:bg-rose-500/10 hover:text-rose-300">
           <LogOut size={20} />
           Sair da conta
         </Button>

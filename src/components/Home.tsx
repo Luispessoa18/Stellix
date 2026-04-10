@@ -5,8 +5,16 @@ import { Transaction, User } from '../types';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 
+const CURRENCY_LABELS: Record<string, string> = {
+  USD: 'USD',
+  BRL: 'BRL',
+  EUR: 'EUR',
+  GBP: 'GBP',
+};
+
 function XlmValue({ tx, xlmUsd, isCredit }: { tx: Transaction; xlmUsd: number; isCredit: boolean }) {
-  const currentUsd = xlmUsd > 0 ? tx.amount * xlmUsd : null;
+  const effectiveUsdPrice = xlmUsd > 0 ? xlmUsd : (tx.usdPriceAtTime || 0);
+  const currentUsd = effectiveUsdPrice > 0 ? tx.amount * effectiveUsdPrice : null;
   const priceAtTime = tx.usdPriceAtTime;
   const pctChange = (priceAtTime && priceAtTime > 0 && xlmUsd > 0)
     ? ((xlmUsd - priceAtTime) / priceAtTime) * 100
@@ -42,16 +50,22 @@ interface HomeProps {
 export default function Home({ user, transactions, onAction }: HomeProps) {
   const [showBalance, setShowBalance] = useState(true);
   const [xlmUsd, setXlmUsd] = useState(0);
+  const [rates, setRates] = useState<Record<string, number>>({ USD: 1 });
 
   useEffect(() => {
     fetch('/api/stellar/price')
       .then((r) => r.json())
       .then((d) => setXlmUsd(Number(d.xlmUsd) || 0))
       .catch(() => {});
+
+    fetch('/api/market/rates')
+      .then((r) => r.json())
+      .then((d) => setRates(d.rates || { USD: 1 }))
+      .catch(() => {});
   }, []);
 
-  const formatCurrency = (val: number) =>
-    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'USD', currencyDisplay: 'symbol' }).format(val);
+  const formatCurrency = (val: number, currency = 'USD') =>
+    new Intl.NumberFormat('pt-BR', { style: 'currency', currency }).format(val);
 
   const formatDateLabel = (timestamp: number) => {
     const date = new Date(timestamp);
@@ -74,10 +88,19 @@ export default function Home({ user, transactions, onAction }: HomeProps) {
     return 'Enviado';
   };
 
-  const getXlmUsdValue = (amount: number, priceAtTime?: number) => {
-    const rate = priceAtTime && priceAtTime > 0 ? priceAtTime : xlmUsd;
-    return rate > 0 ? amount * rate : 0;
+  const getEffectiveXlmPrice = (tx?: Transaction) => {
+    if (xlmUsd > 0) return xlmUsd;
+    return tx?.usdPriceAtTime && tx.usdPriceAtTime > 0 ? tx.usdPriceAtTime : 0;
   };
+
+  const xlmNetUsd = transactions.reduce((total, tx) => {
+    if (tx.currency !== 'XLM') return total;
+
+    const usdValue = tx.amount * getEffectiveXlmPrice(tx);
+    if (tx.type === 'receive' || tx.type === 'deposit') return total + usdValue;
+    if (tx.type === 'send' || tx.type === 'withdraw') return total - usdValue;
+    return total;
+  }, 0);
 
   const xlmNetAmount = transactions.reduce((total, tx) => {
     if (tx.currency !== 'XLM') return total;
@@ -87,8 +110,9 @@ export default function Home({ user, transactions, onAction }: HomeProps) {
     return total;
   }, 0);
 
-  const xlmNetUsd = xlmNetAmount > 0 ? getXlmUsdValue(xlmNetAmount) : 0;
-  const totalBalance = user.balance + xlmNetUsd;
+  const totalUsdBalance = user.balance + xlmNetUsd;
+  const displayRate = rates[user.currency] && rates[user.currency] > 0 ? rates[user.currency] : 1;
+  const totalPrimaryBalance = totalUsdBalance * displayRate;
 
   const grouped: Record<string, Transaction[]> = {};
   for (const tx of transactions) {
@@ -142,11 +166,15 @@ export default function Home({ user, transactions, onAction }: HomeProps) {
             </button>
           </div>
 
-          <h2 className="text-4xl font-bold tracking-tight mb-5 text-white">
-            {showBalance ? formatCurrency(totalBalance) : '$ ......'}
+          <h2 className="text-4xl font-bold tracking-tight text-white">
+            {showBalance ? formatCurrency(totalPrimaryBalance, user.currency) : '......'}
           </h2>
 
-          <div className="flex items-center justify-between">
+          <p className="mt-1 text-sm text-zinc-400">
+            {showBalance ? formatCurrency(totalUsdBalance, 'USD') : '$ ......'} em dolar
+          </p>
+
+          <div className="mt-5 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
               <p className="text-[11px] text-zinc-400 font-medium">Rede Stellar - Testnet</p>
@@ -162,7 +190,7 @@ export default function Home({ user, transactions, onAction }: HomeProps) {
 
           {showBalance && xlmNetAmount > 0 && (
             <p className="mt-4 text-[11px] text-zinc-400">
-              Inclui {xlmNetAmount.toFixed(2)} XLM no total em USD
+              Inclui {xlmNetAmount.toFixed(2)} XLM (~ {formatCurrency(xlmNetUsd, 'USD')}) e moeda principal {CURRENCY_LABELS[user.currency] || user.currency}
             </p>
           )}
         </motion.div>
@@ -254,7 +282,7 @@ export default function Home({ user, transactions, onAction }: HomeProps) {
                           ) : (
                             <>
                               <p className={cn('text-sm font-bold', isCredit ? 'text-emerald-400' : 'text-zinc-200')}>
-                                {isCredit ? '+' : '-'}{formatCurrency(tx.amount)}
+                                {isCredit ? '+' : '-'}{formatCurrency(tx.amount, 'USD')}
                               </p>
                               <p className="text-[9px] text-zinc-600 uppercase">{tx.currency}</p>
                             </>

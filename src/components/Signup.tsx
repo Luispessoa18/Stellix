@@ -1,25 +1,33 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { Mail, Lock, User, Phone, ArrowLeft } from 'lucide-react';
+import { Mail, Lock, User, Phone, ArrowLeft, Coins } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
 interface SignupProps {
-  onSignup: (name: string, email: string, phone: string, password: string) => void;
+  onSignup: (name: string, email: string, phone: string, password: string, currency: string) => void;
   onGoToLogin: () => void;
 }
+
+const CURRENCIES = [
+  { id: 'BRL', label: 'Real brasileiro' },
+  { id: 'USD', label: 'Dolar americano' },
+  { id: 'EUR', label: 'Euro' },
+  { id: 'GBP', label: 'Libra' },
+];
 
 export default function Signup({ onSignup, onGoToLogin }: SignupProps) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
+  const [currency, setCurrency] = useState('BRL');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
-    await onSignup(name, email, phone, password);
+    await onSignup(name, email, phone, password, currency);
     setLoading(false);
   };
 
@@ -45,7 +53,7 @@ export default function Signup({ onSignup, onGoToLogin }: SignupProps) {
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
-          <label className="text-[11px] font-bold text-white/60 uppercase tracking-widest ml-1">Nome Completo</label>
+          <label className="text-[11px] font-bold text-white/60 uppercase tracking-widest ml-1">Nome completo</label>
           <div className="relative">
             <User className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40 w-5 h-5" />
             <Input
@@ -87,12 +95,30 @@ export default function Signup({ onSignup, onGoToLogin }: SignupProps) {
         </div>
 
         <div className="space-y-2">
+          <label className="text-[11px] font-bold text-white/60 uppercase tracking-widest ml-1">Moeda principal</label>
+          <div className="relative">
+            <Coins className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40 w-5 h-5" />
+            <select
+              value={currency}
+              onChange={(e) => setCurrency(e.target.value)}
+              className="w-full h-14 pl-12 pr-4 rounded-2xl bg-white/8 border border-white/15 text-white focus:border-blue-400/60 focus:bg-white/10 transition-all outline-none"
+            >
+              {CURRENCIES.map((option) => (
+                <option key={option.id} value={option.id} className="text-zinc-900">
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="space-y-2">
           <label className="text-[11px] font-bold text-white/60 uppercase tracking-widest ml-1">Senha</label>
           <div className="relative">
             <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40 w-5 h-5" />
             <Input
               type="password"
-              placeholder="••••••••"
+              placeholder="........"
               className="h-14 pl-12 rounded-2xl bg-white/8 border-white/15 text-white placeholder:text-white/30 focus:border-blue-400/60 focus:bg-white/10 transition-all"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -109,14 +135,14 @@ export default function Signup({ onSignup, onGoToLogin }: SignupProps) {
             className="w-full h-14 rounded-2xl font-bold text-base shadow-lg shadow-blue-500/20"
             style={{ background: loading ? 'rgba(59,130,246,0.5)' : '#3b82f6' }}
           >
-            {loading ? 'Criando conta...' : 'Criar Conta'}
+            {loading ? 'Criando conta...' : 'Criar conta'}
           </Button>
         </div>
       </form>
 
       <div className="text-center mt-auto">
         <p className="text-white/40 text-sm">
-          Já tem uma conta?{' '}
+          Ja tem uma conta?{' '}
           <button onClick={onGoToLogin} className="text-blue-400 font-bold hover:text-blue-300 transition-colors">
             Entrar
           </button>
