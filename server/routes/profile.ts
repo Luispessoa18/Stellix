@@ -1,21 +1,26 @@
 import { Router } from 'express';
-import { db } from '../db.js';
+import { db, ACTIVE_NETWORK } from '../db.js';
 import { authMiddleware, type AuthRequest } from '../middleware/auth.js';
 
 const router = Router();
 router.use(authMiddleware);
 
 function formatUser(user: any) {
+  const balance = ACTIVE_NETWORK === 'mainnet' ? Number(user.balance_mainnet ?? 0) : Number(user.balance ?? 0);
+  const stellarPublicKey = ACTIVE_NETWORK === 'mainnet'
+    ? (user.stellar_mainnet_public || user.stellar_public_key || '')
+    : (user.stellar_testnet_public || user.stellar_public_key || '');
   return {
     id: Number(user.id),
     name: user.name,
     email: user.email,
     phone: user.phone || '',
-    balance: Number(user.balance),
+    balance,
     currency: user.currency || 'USD',
-    stellarPublicKey: user.stellar_public_key || '',
+    stellarPublicKey,
+    isAdmin: Boolean(user.is_admin),
     assets: [
-      { id: 'USDC', name: 'USD Coin', amount: Number(user.balance), icon: 'https://cryptologos.cc/logos/usd-coin-usdc-logo.png' },
+      { id: 'USDC', name: 'USD Coin', amount: balance, icon: 'https://cryptologos.cc/logos/usd-coin-usdc-logo.png' },
       { id: 'USDT', name: 'Tether', amount: 0, icon: 'https://cryptologos.cc/logos/tether-usdt-logo.png' },
     ],
   };
@@ -23,7 +28,7 @@ function formatUser(user: any) {
 
 router.get('/me', async (req: AuthRequest, res) => {
   const result = await db.execute({
-    sql: 'SELECT id, name, email, phone, balance, currency, stellar_public_key FROM users WHERE id = ?',
+    sql: 'SELECT id, name, email, phone, balance, currency, stellar_public_key, is_admin FROM users WHERE id = ?',
     args: [req.userId!],
   });
 
@@ -51,7 +56,7 @@ router.patch('/preferences', async (req: AuthRequest, res) => {
   });
 
   const result = await db.execute({
-    sql: 'SELECT id, name, email, phone, balance, currency, stellar_public_key FROM users WHERE id = ?',
+    sql: 'SELECT id, name, email, phone, balance, currency, stellar_public_key, is_admin FROM users WHERE id = ?',
     args: [req.userId!],
   });
 

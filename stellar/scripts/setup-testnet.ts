@@ -8,7 +8,7 @@
 import { createStellarAccount, getAccountBalance } from '../index.js';
 
 async function main() {
-  console.log('🌟 DolarPix — Setup Stellar Testnet\n');
+  console.log('🌟 Stellix — Setup Stellar Testnet\n');
   console.log('Criando nova conta no testnet...');
 
   const account = await createStellarAccount();

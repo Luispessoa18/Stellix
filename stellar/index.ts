@@ -60,6 +60,18 @@ export async function createStellarAccount() {
 }
 
 /**
+ * Sempre cria uma conta testnet (independente do STELLAR_NETWORK configurado).
+ * Usada no signup para garantir que todo usuário tenha uma carteira testnet.
+ */
+export async function createTestnetKeypair(): Promise<{ publicKey: string; secretKey: string }> {
+  const keypair = StellarSdk.Keypair.random();
+  try {
+    await fetch(`${FRIENDBOT_URL}?addr=${encodeURIComponent(keypair.publicKey())}`);
+  } catch {}
+  return { publicKey: keypair.publicKey(), secretKey: keypair.secret() };
+}
+
+/**
  * Funda uma conta no testnet via Friendbot (10.000 XLM).
  */
 export async function fundTestnetAccount(publicKey: string): Promise<void> {

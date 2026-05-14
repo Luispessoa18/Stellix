@@ -21,7 +21,7 @@ const paymentCards = [
   {
     icon: Users,
     title: 'Contatos do Celular',
-    body: 'Sincronize sua agenda e descubra quem já usa DolarPix para envios instantâneos.',
+    body: 'Sincronize sua agenda e descubra quem já usa Stellix para envios instantâneos.',
   },
   {
     icon: Globe,
@@ -57,7 +57,7 @@ const benefits = [
   {
     icon: Zap,
     title: 'Liquidez em Tempo Real',
-    body: 'Diga adeus aos prazos de 30 dias. Com o DolarPix, seu capital está disponível no momento da venda.',
+    body: 'Diga adeus aos prazos de 30 dias. Com o Stellix, seu capital está disponível no momento da venda.',
   },
   {
     icon: Shield,
@@ -99,7 +99,7 @@ export default function Landing({ onLogin, onSignup }: LandingProps) {
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-cyan-500/20 border border-cyan-400/30">
               <Globe className="h-5 w-5 text-cyan-400" />
             </div>
-            <span className="text-xl font-bold tracking-tight text-white">DolarPix</span>
+            <span className="text-xl font-bold tracking-tight text-white">Stellix</span>
           </div>
 
           <div className="hidden items-center gap-8 md:flex">
@@ -211,7 +211,7 @@ export default function Landing({ onLogin, onSignup }: LandingProps) {
           <div className="lg:w-1/2">
             <h2 className="mb-6 text-3xl font-bold text-white">Pague em Qualquer Lugar</h2>
             <p className="mb-10 text-lg leading-relaxed text-zinc-400">
-              O DolarPix transforma seu smartphone em uma ferramenta de pagamento universal. Compre no café da esquina ou envie dinheiro para amigos no outro lado do mundo.
+              O Stellix transforma seu smartphone em uma ferramenta de pagamento universal. Compre no café da esquina ou envie dinheiro para amigos no outro lado do mundo.
             </p>
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
               {paymentCards.map((card) => (
@@ -394,7 +394,7 @@ export default function Landing({ onLogin, onSignup }: LandingProps) {
           <div className="pointer-events-none absolute -right-20 -top-20 h-80 w-80 rounded-full bg-cyan-500/10 blur-[100px]" />
           <div className="flex flex-col items-start gap-12 md:flex-row md:items-center">
             <div className="relative z-10 md:w-1/2">
-              <h2 className="mb-4 text-3xl font-bold text-white">Integre o DolarPix ao seu sistema</h2>
+              <h2 className="mb-4 text-3xl font-bold text-white">Integre o Stellix ao seu sistema</h2>
               <p className="mb-8 leading-relaxed text-zinc-400">
                 Nossa API robusta permite que desenvolvedores criem fluxos de pagamento personalizados em minutos. Documentação completa e SDKs em diversas linguagens.
               </p>
@@ -417,10 +417,10 @@ export default function Landing({ onLogin, onSignup }: LandingProps) {
               </div>
               <pre className="overflow-x-auto text-cyan-400">
                 <code>
-                  <span className="text-zinc-500">{'// Initialize DolarPix SDK\n'}</span>
-                  {'const dolarpix = new DolarPix(\'dp_live_...\');\n\n'}
+                  <span className="text-zinc-500">{'// Initialize Stellix SDK\n'}</span>
+                  {'const stellix = new Stellix(\'dp_live_...\');\n\n'}
                   <span className="text-zinc-500">{'// Create a global charge\n'}</span>
-                  {'const charge = await dolarpix.charges.create({\n'}
+                  {'const charge = await stellix.charges.create({\n'}
                   {'  amount: 25000,\n'}
                   {'  currency: \'USD\',\n'}
                   {'  method: \'global_network\',\n'}
@@ -471,8 +471,8 @@ export default function Landing({ onLogin, onSignup }: LandingProps) {
       <footer className="border-t border-white/5 bg-slate-950 py-12">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-6 px-6 md:flex-row">
           <div className="flex flex-col gap-1.5">
-            <p className="text-lg font-bold text-zinc-200">DolarPix</p>
-            <p className="text-sm text-zinc-500">© 2025 DolarPix. Innovation Built on Blockchain.</p>
+            <p className="text-lg font-bold text-zinc-200">Stellix</p>
+            <p className="text-sm text-zinc-500">© 2025 Stellix. Innovation Built on Blockchain.</p>
           </div>
           <div className="flex gap-8">
             {['Documentação', 'Privacidade', 'Status', 'Contato'].map((link) => (

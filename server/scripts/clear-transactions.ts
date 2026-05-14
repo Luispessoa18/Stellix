@@ -1,7 +1,7 @@
 import { createClient } from '@libsql/client';
 import path from 'path';
 
-const dbPath = path.resolve('data', 'dolarpix.db');
+const dbPath = path.resolve('data', 'stellix.db');
 const db = createClient({ url: `file:${dbPath}` });
 
 const before = await db.execute({

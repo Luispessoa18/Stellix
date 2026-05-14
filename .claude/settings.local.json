@@ -7,7 +7,10 @@
       "Bash(node -e \"require\\('bcryptjs'\\); console.log\\('bcryptjs OK'\\)\")",
       "Bash(node -e \"require\\('jsonwebtoken'\\); console.log\\('jwt OK'\\)\")",
       "Bash(npx tsc:*)",
-      "Bash(node -e \"require\\('./node_modules/three'\\)\")"
+      "Bash(node -e \"require\\('./node_modules/three'\\)\")",
+      "Bash(npx vite *)",
+      "Bash(node --max-old-space-size=768 node_modules/.bin/esbuild src/App.tsx --bundle=false)",
+      "Bash(node *)"
     ]
   }
 }

@@ -1,50 +1,14 @@
-import { ArrowUpRight, ArrowDownLeft, Plus, Eye, EyeOff, Clock, ChevronRight, Landmark, TrendingUp, TrendingDown } from 'lucide-react';
+import { ArrowUpRight, ArrowDownLeft, Eye, EyeOff, ChevronRight, Landmark, QrCode, Clock } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
-import { Transaction, User } from '../types';
+import { Transaction, User, View } from '../types';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
-
-const CURRENCY_LABELS: Record<string, string> = {
-  USD: 'USD',
-  BRL: 'BRL',
-  EUR: 'EUR',
-  GBP: 'GBP',
-};
-
-function XlmValue({ tx, xlmUsd, isCredit }: { tx: Transaction; xlmUsd: number; isCredit: boolean }) {
-  const effectiveUsdPrice = xlmUsd > 0 ? xlmUsd : (tx.usdPriceAtTime || 0);
-  const currentUsd = effectiveUsdPrice > 0 ? tx.amount * effectiveUsdPrice : null;
-  const priceAtTime = tx.usdPriceAtTime;
-  const pctChange = (priceAtTime && priceAtTime > 0 && xlmUsd > 0)
-    ? ((xlmUsd - priceAtTime) / priceAtTime) * 100
-    : null;
-  const gained = pctChange !== null && pctChange >= 0;
-
-  return (
-    <div className="text-right">
-      <p className={cn('text-sm font-bold', isCredit ? 'text-emerald-400' : 'text-zinc-200')}>
-        {isCredit ? '+' : '-'}{tx.amount} XLM
-      </p>
-      {currentUsd !== null && (
-        <p className="text-[10px] text-zinc-500">
-          ~ ${currentUsd.toFixed(2)}
-        </p>
-      )}
-      {pctChange !== null && (
-        <div className={cn('flex items-center justify-end gap-0.5 text-[9px] font-bold', gained ? 'text-emerald-400' : 'text-rose-400')}>
-          {gained ? <TrendingUp size={9} /> : <TrendingDown size={9} />}
-          {gained ? '+' : ''}{pctChange.toFixed(2)}%
-        </div>
-      )}
-    </div>
-  );
-}
 
 interface HomeProps {
   user: User;
   transactions: Transaction[];
-  onAction: (action: 'send' | 'receive' | 'deposit' | 'withdraw') => void;
+  onAction: (action: View) => void;
 }
 
 export default function Home({ user, transactions, onAction }: HomeProps) {
@@ -64,62 +28,43 @@ export default function Home({ user, transactions, onAction }: HomeProps) {
       .catch(() => {});
   }, []);
 
-  const formatCurrency = (val: number, currency = 'USD') =>
+  const formatUSD = (val: number) =>
+    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
+
+  const formatLocal = (val: number, currency: string) =>
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency }).format(val);
 
-  const formatDateLabel = (timestamp: number) => {
-    const date = new Date(timestamp);
+  const formatTime = (ts: number) =>
+    new Date(ts).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+  const formatDateLabel = (ts: number) => {
+    const d = new Date(ts);
     const today = new Date();
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
-
-    if (date.toDateString() === today.toDateString()) return 'Hoje';
-    if (date.toDateString() === yesterday.toDateString()) return 'Ontem';
-    return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' });
+    if (d.toDateString() === today.toDateString()) return 'Hoje';
+    if (d.toDateString() === yesterday.toDateString()) return 'Ontem';
+    return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' });
   };
-
-  const formatTime = (timestamp: number) =>
-    new Date(timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
   const txTypeLabel = (type: Transaction['type']) => {
     if (type === 'receive') return 'Recebido';
-    if (type === 'deposit') return 'Deposito';
+    if (type === 'deposit') return 'Depósito';
     if (type === 'withdraw') return 'Saque';
     return 'Enviado';
   };
 
-  const getEffectiveXlmPrice = (tx?: Transaction) => {
-    if (xlmUsd > 0) return xlmUsd;
-    return tx?.usdPriceAtTime && tx.usdPriceAtTime > 0 ? tx.usdPriceAtTime : 0;
-  };
-
-  const xlmNetUsd = transactions.reduce((total, tx) => {
-    if (tx.currency !== 'XLM') return total;
-
-    const usdValue = tx.amount * getEffectiveXlmPrice(tx);
-    if (tx.type === 'receive' || tx.type === 'deposit') return total + usdValue;
-    if (tx.type === 'send' || tx.type === 'withdraw') return total - usdValue;
-    return total;
+  const xlmNetAmount = transactions.reduce((acc, tx) => {
+    if (tx.currency !== 'XLM') return acc;
+    if (tx.type === 'receive' || tx.type === 'deposit') return acc + tx.amount;
+    if (tx.type === 'send' || tx.type === 'withdraw') return acc - tx.amount;
+    return acc;
   }, 0);
 
-  const xlmNetAmount = transactions.reduce((total, tx) => {
-    if (tx.currency !== 'XLM') return total;
-
-    if (tx.type === 'receive' || tx.type === 'deposit') return total + tx.amount;
-    if (tx.type === 'send' || tx.type === 'withdraw') return total - tx.amount;
-    return total;
-  }, 0);
-
-  const totalUsdBalance = user.balance + xlmNetUsd;
-  const displayRate = rates[user.currency] && rates[user.currency] > 0 ? rates[user.currency] : 1;
-  const totalPrimaryBalance = totalUsdBalance * displayRate;
-
-  const grouped: Record<string, Transaction[]> = {};
-  for (const tx of transactions) {
-    const label = formatDateLabel(tx.timestamp);
-    if (!grouped[label]) grouped[label] = [];
-    grouped[label].push(tx);
-  }
+  const xlmNetUsd = xlmNetAmount * (xlmUsd || 0);
+  const totalUsd = user.balance + xlmNetUsd;
+  const displayRate = rates[user.currency] || 1;
+  const totalLocal = totalUsd * displayRate;
 
   const initials = user.name
     .split(' ')
@@ -128,177 +73,168 @@ export default function Home({ user, transactions, onAction }: HomeProps) {
     .join('')
     .toUpperCase();
 
-  const todayLabel = new Date().toLocaleDateString('pt-BR', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-  });
+  const recentTxs = transactions.slice(0, 8);
+  const grouped: Record<string, Transaction[]> = {};
+  for (const tx of recentTxs) {
+    const label = formatDateLabel(tx.timestamp);
+    if (!grouped[label]) grouped[label] = [];
+    grouped[label].push(tx);
+  }
+
+  const actions = [
+    { label: 'Pagar', icon: ArrowUpRight, color: '#8B5CF6', action: 'send' as View },
+    { label: 'Receber', icon: ArrowDownLeft, color: '#10B981', action: 'receive' as View },
+    { label: 'PIX', icon: QrCode, color: '#3B82F6', action: 'pix' as View },
+    { label: 'Extrato', icon: Clock, color: '#F59E0B', action: 'statement' as View },
+  ];
 
   return (
-    <div className="flex flex-col h-full pb-24 overflow-y-auto no-scrollbar md:max-w-3xl md:mx-auto w-full">
-      <header className="px-6 pt-10 pb-3 flex justify-between items-center">
+    <div className="flex flex-col h-full pb-24 overflow-y-auto no-scrollbar md:max-w-lg md:mx-auto w-full">
+      {/* Header */}
+      <header className="px-5 pt-12 pb-6 flex justify-between items-center">
         <div>
-          <p className="text-zinc-400 text-sm">Ola, {user.name.split(' ')[0]}</p>
-          <h1 className="text-base font-semibold text-zinc-300 capitalize">{todayLabel}</h1>
+          <p className="text-zinc-500 text-sm">Olá,</p>
+          <p className="text-white text-xl font-bold leading-tight">{user.name.split(' ')[0]}</p>
         </div>
-        <Avatar className="h-10 w-10 border-2 border-indigo-400/35">
-          <AvatarFallback className="bg-indigo-500/25 text-xs font-bold text-indigo-200">{initials}</AvatarFallback>
+        <Avatar className="h-10 w-10">
+          <AvatarFallback className="bg-violet-500/25 text-violet-200 text-sm font-bold">{initials}</AvatarFallback>
         </Avatar>
       </header>
 
-      <section className="px-6 pt-2 pb-4">
+      {/* Balance Card */}
+      <section className="px-5 mb-6">
         <motion.div
-          initial={{ scale: 0.97, opacity: 0 }}
+          initial={{ scale: 0.96, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ duration: 0.3 }}
-          className="relative overflow-hidden rounded-3xl border border-white/12 p-6 shadow-2xl"
-          style={{
-            background:
-              'linear-gradient(145deg, #1a1f35 0%, #12182a 45%, #0c1020 100%)',
-          }}
+          className="rounded-3xl p-6 relative overflow-hidden"
+          style={{ background: 'linear-gradient(135deg, #1e1040 0%, #2d1b69 50%, #1a0f3d 100%)' }}
         >
-          <div className="pointer-events-none absolute -right-16 top-0 h-48 w-48 rounded-full bg-indigo-500/15 blur-3xl" />
-          <div className="pointer-events-none absolute left-0 top-0 h-40 w-40 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/10 blur-3xl" />
+          <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-violet-500/20 blur-3xl" />
+          <div className="pointer-events-none absolute left-0 bottom-0 h-32 w-32 -translate-x-1/2 translate-y-1/2 rounded-full bg-indigo-500/15 blur-3xl" />
 
-          <div className="flex justify-between items-start mb-1">
-            <p className="text-zinc-400 text-xs font-medium">Saldo disponivel</p>
-            <button
-              onClick={() => setShowBalance(!showBalance)}
-              className="text-zinc-400 hover:text-zinc-200 transition-colors"
-            >
-              {showBalance ? <Eye size={15} /> : <EyeOff size={15} />}
-            </button>
-          </div>
-
-          <h2 className="text-4xl font-bold tracking-tight text-white">
-            {showBalance ? formatCurrency(totalPrimaryBalance, user.currency) : '......'}
-          </h2>
-
-          <p className="mt-1 text-sm text-zinc-400">
-            {showBalance ? formatCurrency(totalUsdBalance, 'USD') : '$ ......'} referência em USD
-          </p>
-          <p className="mt-3 text-xs leading-relaxed text-zinc-500">
-            Seu dinheiro, suas pessoas. Transações com a clareza de um banco e a velocidade da rede.
-          </p>
-
-          <div className="mt-5 flex items-center justify-between gap-3">
-            <div className="flex min-w-0 items-center gap-2">
-              <img src="/stellar-mark.svg" alt="Stellar" className="h-6 w-6 shrink-0 opacity-90" width={24} height={24} />
-              <div className="min-w-0">
-                <p className="text-[10px] font-bold uppercase tracking-wide text-teal-400/95">Stellar</p>
-                <p className="truncate text-[11px] font-medium text-zinc-400">Testnet · liquidação rápida</p>
-              </div>
+          <div className="relative">
+            <div className="flex justify-between items-center mb-3">
+              <p className="text-violet-300/60 text-xs font-medium uppercase tracking-widest">Saldo disponível</p>
+              <button
+                onClick={() => setShowBalance(!showBalance)}
+                className="text-violet-300/50 hover:text-violet-200 transition-colors"
+              >
+                {showBalance ? <Eye size={16} /> : <EyeOff size={16} />}
+              </button>
             </div>
-            <div className="flex gap-1">
-              {user.assets.map((a) => (
-                <span key={a.id} className="text-[9px] bg-white/10 text-zinc-300 px-2 py-0.5 rounded-full font-bold">
-                  {a.id}
-                </span>
-              ))}
-            </div>
-          </div>
 
-          {showBalance && xlmNetAmount > 0 && (
-            <p className="mt-4 text-[11px] text-zinc-400">
-              Inclui {xlmNetAmount.toFixed(2)} XLM (~ {formatCurrency(xlmNetUsd, 'USD')}) e moeda principal {CURRENCY_LABELS[user.currency] || user.currency}
-            </p>
-          )}
+            <h2 className="text-4xl font-bold text-white tracking-tight">
+              {showBalance ? formatUSD(totalUsd) : '$ ••••••'}
+            </h2>
+
+            {user.currency !== 'USD' && (
+              <p className="mt-1.5 text-violet-300/50 text-base font-medium">
+                {showBalance
+                  ? `≈ ${formatLocal(totalLocal, user.currency)}`
+                  : `${user.currency} ••••••`}
+              </p>
+            )}
+          </div>
         </motion.div>
       </section>
 
-      <section className="px-6 pb-4">
-        <div className="grid grid-cols-4 gap-3">
-          {[
-            { label: 'Enviar', icon: ArrowUpRight, color: 'text-primary', bg: 'bg-primary/15', action: 'send' as const },
-            { label: 'Receber', icon: ArrowDownLeft, color: 'text-emerald-400', bg: 'bg-emerald-500/15', action: 'receive' as const },
-            { label: 'Depositar', icon: Plus, color: 'text-orange-400', bg: 'bg-orange-500/15', action: 'deposit' as const },
-            { label: 'Extrato', icon: Clock, color: 'text-purple-400', bg: 'bg-purple-500/15', action: null },
-          ].map((item) => (
-            <button
-              key={item.label}
-              onClick={() => item.action && onAction(item.action)}
-              className="flex flex-col items-center gap-2 group"
-            >
-              <div
-                className={cn(
-                  'w-14 h-14 rounded-2xl border border-white/10 flex items-center justify-center transition-transform group-hover:scale-105',
-                  item.bg
-                )}
+      {/* Action Buttons */}
+      <section className="px-5 mb-6">
+        <div className="grid grid-cols-4 gap-2">
+          {actions.map((item) => {
+            const Icon = item.icon;
+            return (
+              <button
+                key={item.label}
+                onClick={() => onAction(item.action)}
+                className="flex flex-col items-center gap-2.5 group"
               >
-                <item.icon size={22} className={item.color} />
-              </div>
-              <span className="text-[10px] text-zinc-400 font-medium">{item.label}</span>
-            </button>
-          ))}
+                <div
+                  className="w-14 h-14 rounded-full flex items-center justify-center transition-transform group-active:scale-90"
+                  style={{
+                    background: `${item.color}18`,
+                    border: `1.5px solid ${item.color}35`,
+                  }}
+                >
+                  <Icon size={22} style={{ color: item.color }} />
+                </div>
+                <span className="text-xs text-zinc-400 font-medium">{item.label}</span>
+              </button>
+            );
+          })}
         </div>
       </section>
 
-      <section className="px-6 flex-1">
-        <div className="flex justify-between items-center mb-3">
-          <h2 className="text-sm font-bold text-zinc-200">Transacoes</h2>
-          <button className="text-[10px] text-primary font-bold flex items-center gap-1 hover:text-primary/80 transition-colors">
-            Ver todas <ChevronRight size={11} />
+      {/* Transactions */}
+      <section className="px-5 flex-1">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-sm font-bold text-zinc-200">Últimas transações</h3>
+          <button
+            onClick={() => onAction('statement')}
+            className="text-xs text-violet-400 font-semibold flex items-center gap-1 hover:text-violet-300 transition-colors"
+          >
+            Ver todas <ChevronRight size={12} />
           </button>
         </div>
 
         {Object.keys(grouped).length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-zinc-600">
+          <div className="flex flex-col items-center py-16 text-zinc-600">
             <Landmark size={32} className="mb-3 opacity-40" />
-            <p className="text-sm">Nenhuma transacao encontrada</p>
+            <p className="text-sm">Nenhuma transação ainda</p>
           </div>
         ) : (
-          <div className="space-y-5 pb-4">
+          <div className="space-y-5 pb-6">
             {Object.entries(grouped).map(([date, txs]) => (
               <div key={date}>
-                <p className="text-[10px] text-zinc-600 font-bold uppercase tracking-wider mb-2">{date}</p>
-                <div className="space-y-2">
-                  {txs.map((tx) => {
+                <p className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest mb-2">{date}</p>
+                <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.06)' }}>
+                  {txs.map((tx, i) => {
                     const isCredit = tx.type === 'receive' || tx.type === 'deposit';
+                    const usdValue =
+                      tx.currency === 'XLM'
+                        ? tx.amount * (xlmUsd || tx.usdPriceAtTime || 0)
+                        : tx.amount;
                     return (
-                      <motion.div
+                      <div
                         key={tx.id}
-                        initial={{ opacity: 0, x: -8 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        className="rounded-2xl p-4 border border-white/5 flex items-center gap-3"
-                        style={{ background: 'rgba(255,255,255,0.03)' }}
+                        className={cn(
+                          'flex items-center gap-3 px-4 py-3.5',
+                          i > 0 && 'border-t border-white/5'
+                        )}
+                        style={{ background: 'rgba(255,255,255,0.02)' }}
                       >
                         <div
-                          className={cn(
-                            'w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0',
-                            isCredit ? 'bg-emerald-500/15' : 'bg-rose-500/15'
-                          )}
+                          className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
+                          style={{
+                            background: isCredit
+                              ? 'rgba(16,185,129,0.12)'
+                              : 'rgba(239,68,68,0.10)',
+                          }}
                         >
-                          {isCredit ? (
-                            tx.type === 'deposit' ? (
-                              <Plus size={18} className="text-emerald-400" />
-                            ) : (
-                              <ArrowDownLeft size={18} className="text-emerald-400" />
-                            )
-                          ) : (
-                            <ArrowUpRight size={18} className="text-rose-400" />
-                          )}
+                          {isCredit
+                            ? <ArrowDownLeft size={16} style={{ color: '#10B981' }} />
+                            : <ArrowUpRight size={16} style={{ color: '#EF4444' }} />}
                         </div>
 
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-zinc-100 truncate">{tx.counterparty}</p>
-                          <p className="text-[10px] text-zinc-500">
-                            {txTypeLabel(tx.type)} - {formatTime(tx.timestamp)}
+                          <p className="text-sm font-semibold text-zinc-100 truncate">
+                            {tx.counterparty || txTypeLabel(tx.type)}
+                          </p>
+                          <p className="text-xs text-zinc-500">
+                            {txTypeLabel(tx.type)} · {formatTime(tx.timestamp)}
                           </p>
                         </div>
 
-                        <div className="text-right flex-shrink-0">
-                          {tx.currency === 'XLM' ? (
-                            <XlmValue tx={tx} xlmUsd={xlmUsd} isCredit={isCredit} />
-                          ) : (
-                            <>
-                              <p className={cn('text-sm font-bold', isCredit ? 'text-emerald-400' : 'text-zinc-200')}>
-                                {isCredit ? '+' : '-'}{formatCurrency(tx.amount, 'USD')}
-                              </p>
-                              <p className="text-[9px] text-zinc-600 uppercase">{tx.currency}</p>
-                            </>
+                        <p
+                          className={cn(
+                            'text-sm font-bold shrink-0',
+                            isCredit ? 'text-emerald-400' : 'text-zinc-300'
                           )}
-                        </div>
-                      </motion.div>
+                        >
+                          {isCredit ? '+' : '-'}{formatUSD(usdValue)}
+                        </p>
+                      </div>
                     );
                   })}
                 </div>

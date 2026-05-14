@@ -1,4 +1,4 @@
-export type View = 'home' | 'send' | 'receive' | 'deposit' | 'withdraw' | 'assets' | 'profile' | 'chat' | 'login' | 'signup';
+export type View = 'home' | 'send' | 'receive' | 'deposit' | 'withdraw' | 'assets' | 'profile' | 'chat' | 'login' | 'signup' | 'pix' | 'contacts' | 'statement';
 
 export interface Transaction {
   id: string;
@@ -28,6 +28,7 @@ export interface User {
   currency: string;
   assets: Asset[];
   stellarPublicKey?: string;
+  isAdmin?: boolean;
 }
 
 export interface ChatMessage {

@@ -6,7 +6,6 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ChatMessage, Contact, NearbyContact, Transaction, User } from '../types';
-import { GoogleGenAI, Type } from '@google/genai';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -109,7 +108,7 @@ export default function AIChat({ user, transactions, onExecuteTransaction }: AIC
       };
     });
     return [
-      { id: 'assistant' as const, title: 'IA DolarPix', subtitle: assistantPreview },
+      { id: 'assistant' as const, title: 'IA Stellix', subtitle: assistantPreview },
       ...contactThreads,
     ];
   }, [assistantMessages, contacts, friendThreads]);
@@ -123,65 +122,29 @@ export default function AIChat({ user, transactions, onExecuteTransaction }: AIC
     setIsLoading(true);
 
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-      const systemInstruction = `
-        Voce e o assistente do DolarPix.
-        Nome: ${user.name}
-        Saldo em USD: ${user.balance}
-        Moeda principal: ${user.currency}
-        Contatos: ${contacts.map((c) => `${c.name} (${c.identifier})`).join(', ')}
-        Historico: ${transactions.slice(0, 5).map((t) => `${t.type} ${t.amount} ${t.currency} com ${t.counterparty}`).join(' | ')}
-        So execute transferencias apos confirmacao explicita.
-      `;
+      const token = localStorage.getItem('token') ?? '';
+      const systemPrompt = `Voce e o assistente do Stellix. Nome: ${user.name}. Saldo: $${user.balance} ${user.currency}. Contatos: ${contacts.map((c) => c.name).join(', ')}. So execute transferencias apos confirmacao explicita.`;
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: [
-          ...assistantMessages.map((m) => ({ role: m.role === 'user' ? 'user' : 'model', parts: [{ text: m.content }] })),
-          { role: 'user', parts: [{ text: userMessage }] },
-        ],
-        config: {
-          systemInstruction,
-          tools: [{
-            functionDeclarations: [{
-              name: 'executeTransaction',
-              description: 'Executa uma transferencia',
-              parameters: {
-                type: Type.OBJECT,
-                properties: {
-                  amount: { type: Type.NUMBER },
-                  recipient: { type: Type.STRING },
-                  currency: { type: Type.STRING, enum: ['USDC', 'USDT', 'XLM'] },
-                },
-                required: ['amount', 'recipient', 'currency'],
-              },
-            }],
-          }],
-        },
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          systemPrompt,
+          messages: [
+            ...assistantMessages.map((m) => ({ role: m.role === 'user' ? 'user' : 'model', content: m.content })),
+            { role: 'user', content: userMessage },
+          ],
+        }),
       });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? 'Erro na IA');
 
-      const functionCalls = response.functionCalls;
-      if (functionCalls?.length) {
-        const call = functionCalls[0];
-        if (call.name === 'executeTransaction') {
-          const { amount, recipient, currency } = call.args as any;
-          onExecuteTransaction(Number(amount), String(recipient), String(currency));
-          setAssistantMessages((prev) => [...prev, {
-            role: 'assistant',
-            content: `Transferencia preparada: ${amount} ${currency} para ${recipient}.`,
-          }]);
-        }
-      } else {
-        setAssistantMessages((prev) => [...prev, {
-          role: 'assistant',
-          content: response.text || 'Nao consegui responder agora.',
-        }]);
-      }
-    } catch (error) {
+      setAssistantMessages((prev) => [...prev, { role: 'assistant', content: data.content || 'Sem resposta.' }]);
+    } catch (error: any) {
       console.error(error);
       setAssistantMessages((prev) => [...prev, {
         role: 'assistant',
-        content: 'Tive um problema tecnico agora. Tente novamente.',
+        content: error.message?.includes('configurada') ? 'IA não configurada. Configure a chave no painel admin.' : 'Tive um problema técnico. Tente novamente.',
       }]);
     } finally {
       setIsLoading(false);
@@ -351,7 +314,7 @@ export default function AIChat({ user, transactions, onExecuteTransaction }: AIC
   };
 
   const conversationTitle = selectedThread === 'assistant'
-    ? 'IA DolarPix'
+    ? 'IA Stellix'
     : selectedContact?.name || 'Contato';
 
   return (

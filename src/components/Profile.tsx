@@ -123,7 +123,7 @@ export default function Profile({ user, onLogout, onUserUpdate }: ProfileProps) 
           </div>
         </div>
         <h2 className="text-xl font-bold text-white">{user.name}</h2>
-        <p className="text-white/30 text-[10px] font-bold uppercase tracking-widest">Membro DolarPix</p>
+        <p className="text-white/30 text-[10px] font-bold uppercase tracking-widest">Membro Stellix</p>
       </div>
 
       <div className="space-y-6">
@@ -182,7 +182,7 @@ export default function Profile({ user, onLogout, onUserUpdate }: ProfileProps) 
           <div className="flex items-center justify-between px-1">
             <h3 className="text-[10px] font-bold text-white/40 uppercase tracking-widest flex items-center gap-1.5">
               <Key size={11} />
-              Chaves DolarPix
+              Chaves Stellix
             </h3>
             <span className="text-[9px] text-white/20">Para receber pagamentos</span>
           </div>
@@ -300,7 +300,7 @@ export default function Profile({ user, onLogout, onUserUpdate }: ProfileProps) 
       </div>
 
       <div className="mt-8 text-center">
-        <p className="text-[9px] text-white/15 font-bold uppercase tracking-[0.3em]">DolarPix v1.0.0</p>
+        <p className="text-[9px] text-white/15 font-bold uppercase tracking-[0.3em]">Stellix v1.0.0</p>
       </div>
     </div>
   );

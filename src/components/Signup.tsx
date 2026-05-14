@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { Mail, Lock, User, Phone, ArrowLeft, Coins } from 'lucide-react';
+import { Mail, Lock, User, Phone, ArrowLeft, Coins, KeyRound } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
 interface SignupProps {
-  onSignup: (name: string, email: string, phone: string, password: string, currency: string) => void;
+  onSignup: (name: string, email: string, phone: string, password: string, currency: string, inviteCode: string) => void;
   onGoToLogin: () => void;
   onBackToLanding: () => void;
 }
@@ -23,12 +23,13 @@ export default function Signup({ onSignup, onGoToLogin, onBackToLanding }: Signu
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [currency, setCurrency] = useState('BRL');
+  const [inviteCode, setInviteCode] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
-    await onSignup(name, email, phone, password, currency);
+    await onSignup(name, email, phone, password, currency, inviteCode);
     setLoading(false);
   };
 
@@ -49,7 +50,7 @@ export default function Signup({ onSignup, onGoToLogin, onBackToLanding }: Signu
         className="mb-8"
       >
         <h1 className="text-3xl font-bold tracking-tight mb-2 text-white">Criar conta</h1>
-        <p className="text-sm text-white/50">Transacoes rapidas, com a seriedade que voce espera de um banco.</p>
+        <p className="text-sm text-white/50">Acesso beta por convite para pagamentos globais na rede Stellar.</p>
       </motion.div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -125,6 +126,20 @@ export default function Signup({ onSignup, onGoToLogin, onBackToLanding }: Signu
               onChange={(e) => setPassword(e.target.value)}
               required
               minLength={6}
+            />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-[11px] font-bold text-white/60 uppercase tracking-widest ml-1">Codigo de convite</label>
+          <div className="relative">
+            <KeyRound className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40 w-5 h-5" />
+            <Input
+              placeholder="Seu codigo de acesso"
+              className="h-14 rounded-2xl border-white/15 bg-white/8 pl-12 text-white placeholder:text-white/30 transition-all focus:border-primary/55 focus:bg-white/10"
+              value={inviteCode}
+              onChange={(e) => setInviteCode(e.target.value)}
+              required
             />
           </div>
         </div>

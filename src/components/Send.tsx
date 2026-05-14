@@ -1,15 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ArrowLeft, Check, Delete, UserPlus, X, Trash2, Search } from 'lucide-react';
+import { ArrowLeft, Check, Delete, UserPlus, X, Trash2, Search, Zap } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { Contact, Transaction } from '../types';
 import { cn } from '@/lib/utils';
 
+interface FeePreview {
+  sponsored: boolean;
+  fee: number;
+  net: number;
+  feeRate: number;
+  gross: number;
+}
+
 interface SendProps {
   onBack: () => void;
   onSuccess: (transaction: Transaction) => void;
+  initialContact?: { identifier: string; name: string };
 }
 
 const CURRENCIES = [
@@ -21,11 +30,13 @@ const CURRENCIES = [
 function getToken() { return localStorage.getItem('token') || ''; }
 const HEADERS = () => ({ Authorization: `Bearer ${getToken()}`, 'Content-Type': 'application/json' });
 
-export default function Send({ onBack, onSuccess }: SendProps) {
-  const [step, setStep] = useState<'recipient' | 'currency' | 'amount' | 'confirm' | 'success'>('recipient');
+export default function Send({ onBack, onSuccess, initialContact }: SendProps) {
+  const [step, setStep] = useState<'recipient' | 'currency' | 'amount' | 'confirm' | 'success'>(
+    initialContact ? 'currency' : 'recipient'
+  );
   const [search, setSearch] = useState('');
-  const [recipient, setRecipient] = useState('');
-  const [recipientName, setRecipientName] = useState('');
+  const [recipient, setRecipient] = useState(initialContact?.identifier || '');
+  const [recipientName, setRecipientName] = useState(initialContact?.name || '');
   const [selectedCurrency, setSelectedCurrency] = useState(CURRENCIES[0]);
   const [amount, setAmount] = useState('0');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -34,6 +45,7 @@ export default function Send({ onBack, onSuccess }: SendProps) {
   const [showAddContact, setShowAddContact] = useState(false);
   const [newContactName, setNewContactName] = useState('');
   const [savingContact, setSavingContact] = useState(false);
+  const [feePreview, setFeePreview] = useState<FeePreview | null>(null);
 
   useEffect(() => {
     fetch('/api/contacts', { headers: HEADERS() })
@@ -108,6 +120,18 @@ export default function Send({ onBack, onSuccess }: SendProps) {
   const usdEquiv = selectedCurrency.id === 'XLM' && xlmUsd > 0
     ? `~ $${(amountNum * xlmUsd).toFixed(2)} USD`
     : null;
+
+  // Busca fee preview sempre que amount ou currency mudar
+  useEffect(() => {
+    if (amountNum <= 0 || selectedCurrency.id !== 'USDC') { setFeePreview(null); return; }
+    const t = setTimeout(() => {
+      fetch(`/api/transactions/fee-preview?amount=${amountNum}&currency=USDC`, { headers: HEADERS() })
+        .then((r) => r.json())
+        .then(setFeePreview)
+        .catch(() => {});
+    }, 400);
+    return () => clearTimeout(t);
+  }, [amountNum, selectedCurrency.id]);
 
   const handleSend = async () => {
     setIsProcessing(true);
@@ -305,8 +329,8 @@ export default function Send({ onBack, onSuccess }: SendProps) {
           )}
 
           {step === 'confirm' && (
-            <motion.div key="confirm" initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="px-5 flex-1 flex flex-col justify-center gap-6 pb-4">
-              <div className="text-center space-y-4">
+            <motion.div key="confirm" initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="px-5 flex-1 flex flex-col justify-center gap-5 pb-4">
+              <div className="text-center space-y-3">
                 <Avatar className="w-20 h-20 mx-auto">
                   <AvatarFallback className="bg-blue-500/20 text-blue-300 text-2xl font-bold">{initials(recipientName || recipient)}</AvatarFallback>
                 </Avatar>
@@ -317,20 +341,58 @@ export default function Send({ onBack, onSuccess }: SendProps) {
                   <p className="text-white/50 text-sm mt-1">para <span className="text-white font-semibold">{recipientName || recipient}</span></p>
                 </div>
               </div>
+
+              {/* Fee breakdown / sponsored badge */}
               <div className="rounded-2xl p-4 space-y-3" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                <div className="flex justify-between text-sm">
-                  <span className="text-white/50">Moeda</span>
-                  <span className="text-white font-bold">{selectedCurrency.id}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-white/50">Taxa de rede</span>
-                  <span className="text-emerald-400 font-bold text-xs uppercase tracking-widest">Gratis</span>
-                </div>
+                {feePreview && feePreview.sponsored ? (
+                  <>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-white/50">Valor bruto</span>
+                      <span className="text-white font-bold">${amount} USDC</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-white/50">Taxa plataforma (1%)</span>
+                      <span className="text-orange-400 font-bold">-${feePreview.fee.toFixed(4)} USDC</span>
+                    </div>
+                    <div className="flex justify-between text-sm border-t border-white/10 pt-2 mt-1">
+                      <span className="text-white/70 font-semibold">Destino recebe</span>
+                      <span className="text-emerald-400 font-bold">${feePreview.net.toFixed(4)} USDC</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-white/50">Gas XLM</span>
+                      <div className="flex items-center gap-1.5">
+                        <Zap size={12} className="text-violet-400" />
+                        <span className="text-violet-400 font-bold text-xs">Patrocinado pela StellixPay</span>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-white/50">Moeda</span>
+                      <span className="text-white font-bold">{selectedCurrency.id}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-white/50">Taxa de rede</span>
+                      <span className="text-emerald-400 font-bold text-xs uppercase tracking-widest">Grátis</span>
+                    </div>
+                  </>
+                )}
                 <div className="flex justify-between text-sm">
                   <span className="text-white/50">Tempo estimado</span>
                   <span className="text-white">~3 segundos</span>
                 </div>
               </div>
+
+              {feePreview?.sponsored && (
+                <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl" style={{ background: 'rgba(124,58,237,0.10)', border: '1px solid rgba(124,58,237,0.20)' }}>
+                  <Zap size={14} className="text-violet-400 shrink-0" />
+                  <p className="text-xs text-violet-300/80 leading-relaxed">
+                    Você <span className="font-bold text-violet-300">não precisa de XLM</span> — a StellixPay patrocina o gas desta transação.
+                  </p>
+                </div>
+              )}
+
               <button className="w-full h-14 rounded-2xl font-bold text-base text-white disabled:opacity-50 flex items-center justify-center" style={{ background: '#3b82f6' }} disabled={isProcessing} onClick={handleSend}>
                 {isProcessing
                   ? <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }} className="w-6 h-6 border-2 border-white border-t-transparent rounded-full" />

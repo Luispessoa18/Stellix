@@ -30,7 +30,7 @@ Carteira digital para envio e recebimento de stablecoins (USDC/USDT) na rede **S
 
 ```bash
 git clone <url-do-repositorio>
-cd dolarpix
+cd stellix
 npm install
 ```
 
@@ -132,12 +132,12 @@ Acesse: [http://localhost:3000](http://localhost:3000)
 
 ## Banco de dados
 
-O banco SQLite é criado automaticamente em `data/dolarpix.db` na primeira execução do servidor. Não é necessário nenhuma migração manual.
+O banco SQLite é criado automaticamente em `data/stellix.db` na primeira execução do servidor. Não é necessário nenhuma migração manual.
 
 Para reiniciar o banco do zero (apaga todos os dados):
 
 ```bash
-rm data/dolarpix.db
+rm data/stellix.db
 npm run dev:server
 ```
 
@@ -146,7 +146,7 @@ npm run dev:server
 ## Estrutura do projeto
 
 ```
-dolarpix/
+stellix/
 ├── src/                        # Frontend React
 │   ├── components/             # Telas e componentes UI
 │   │   ├── Login.tsx

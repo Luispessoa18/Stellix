@@ -8,7 +8,7 @@
 import { createStellarAccount, sendPayment, getAccountBalance } from '../index.js';
 
 async function main() {
-  console.log('🧪 DolarPix — Teste de Transação Stellar (Testnet)\n');
+  console.log('🧪 Stellix — Teste de Transação Stellar (Testnet)\n');
 
   // Cria duas contas de teste
   console.log('Criando conta de origem...');
@@ -33,7 +33,7 @@ async function main() {
     destinationPublicKey: dest.publicKey,
     amount,
     asset: 'XLM',
-    memo: 'Teste DolarPix',
+    memo: 'Teste Stellix',
   });
 
   console.log(`\n✅ Transação enviada!`);

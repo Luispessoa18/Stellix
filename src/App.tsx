@@ -5,7 +5,7 @@
 
 import { useEffect, useState } from 'react';
 import { Toaster } from '@/components/ui/sonner';
-import { View, Transaction, User } from './types';
+import { View, Transaction, User, Contact } from './types';
 import Navigation from './components/Navigation';
 import Home from './components/Home';
 import Send from './components/Send';
@@ -17,6 +17,9 @@ import Login from './components/Login';
 import Signup from './components/Signup';
 import MarketingLayout from './components/MarketingLayout';
 import Deposit from './components/Deposit';
+import PIX from './components/PIX';
+import Contacts from './components/Contacts';
+import Statement from './components/Statement';
 import { AnimatePresence, motion } from 'motion/react';
 import { toast } from 'sonner';
 
@@ -59,6 +62,7 @@ export default function App() {
   const [user, setUser] = useState<User>(EMPTY_USER);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [xlmUsd, setXlmUsd] = useState(0);
+  const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -117,12 +121,12 @@ export default function App() {
     }
   };
 
-  const handleSignup = async (name: string, email: string, phone: string, password: string, currency: string) => {
+  const handleSignup = async (name: string, email: string, phone: string, password: string, currency: string, inviteCode: string) => {
     try {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, phone, password, currency }),
+        body: JSON.stringify({ name, email, phone, password, currency, inviteCode }),
       });
 
       const data = await res.json();
@@ -221,16 +225,36 @@ export default function App() {
     );
   }
 
+  const handleContactSend = (contact: Contact) => {
+    setSelectedContact(contact);
+    setCurrentView('send');
+  };
+
   const renderView = () => {
     switch (currentView) {
       case 'home':
         return <Home user={user} transactions={transactions} onAction={(action) => setCurrentView(action)} />;
       case 'send':
-        return <Send onBack={() => setCurrentView('home')} onSuccess={handleSendSuccess} />;
+        return (
+          <Send
+            onBack={() => { setCurrentView('home'); setSelectedContact(null); }}
+            onSuccess={handleSendSuccess}
+            initialContact={selectedContact ? { identifier: selectedContact.identifier, name: selectedContact.name } : undefined}
+          />
+        );
       case 'receive':
         return <Receive user={user} />;
       case 'deposit':
         return <Deposit user={user} onBack={() => setCurrentView('home')} />;
+      case 'pix':
+        return <PIX user={user} onBalanceRefresh={() => {
+          const token = localStorage.getItem('token');
+          if (token) fetchCurrentUser(token).then((u) => { if (u) setUser(u); });
+        }} />;
+      case 'contacts':
+        return <Contacts onSendToContact={handleContactSend} />;
+      case 'statement':
+        return <Statement transactions={transactions} onBack={() => setCurrentView('home')} />;
       case 'chat':
         return <AIChat user={user} transactions={transactions} onExecuteTransaction={handleSendSuccess} />;
       case 'assets':
@@ -238,16 +262,16 @@ export default function App() {
       case 'profile':
         return <Profile user={user} onLogout={handleLogout} onUserUpdate={handleUserUpdate} />;
       default:
-        return <Home user={user} transactions={transactions} onAction={(v) => setCurrentView(v as View)} />;
+        return <Home user={user} transactions={transactions} onAction={(action) => setCurrentView(action)} />;
     }
   };
 
-  const hideNav = currentView === 'deposit';
+  const hideSidebar = currentView === 'deposit' || currentView === 'statement';
 
   return (
-    <div className="h-screen bg-app text-white overflow-hidden flex">
-      {!hideNav && (
-        <Navigation variant="sidebar" currentView={currentView} onViewChange={setCurrentView} />
+    <div className="h-screen overflow-hidden flex" style={{ background: 'var(--t-bg)', color: 'var(--t-text)' }}>
+      {!hideSidebar && (
+        <Navigation variant="sidebar" currentView={currentView} onViewChange={setCurrentView} isAdmin={user.isAdmin} />
       )}
 
       <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
@@ -265,11 +289,12 @@ export default function App() {
             </motion.div>
           </AnimatePresence>
         </main>
-
-        {!hideNav && (
-          <Navigation variant="bottom" currentView={currentView} onViewChange={setCurrentView} />
-        )}
       </div>
+
+      {/* Bottom nav — fixed, rendered globally */}
+      {!hideSidebar && (
+        <Navigation variant="bottom" currentView={currentView} onViewChange={setCurrentView} isAdmin={user.isAdmin} />
+      )}
 
       <Toaster position="top-center" richColors />
     </div>

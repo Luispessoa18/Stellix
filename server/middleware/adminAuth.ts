@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
 import type { Request, Response, NextFunction } from 'express';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'dolarpix-dev-secret-change-in-production';
+const JWT_SECRET = process.env.JWT_SECRET || 'stellix-dev-secret-change-in-production';
 
 export interface AdminRequest extends Request {
   isAdmin?: boolean;

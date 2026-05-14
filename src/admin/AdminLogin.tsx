@@ -41,7 +41,7 @@ export default function AdminLogin({ onLogin }: AdminLoginProps) {
             style={{ background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.30)' }}>
             <ShieldCheck className="text-blue-400 w-8 h-8" />
           </div>
-          <h1 className="text-2xl font-bold text-white">DolarPix Admin</h1>
+          <h1 className="text-2xl font-bold text-white">Stellix Admin</h1>
           <p className="text-white/40 text-sm mt-1">Acesso restrito</p>
         </div>
 

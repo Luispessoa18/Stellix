@@ -10,11 +10,15 @@ import contactRoutes from './routes/contacts.js';
 import profileKeyRoutes from './routes/profileKeys.js';
 import profileRoutes from './routes/profile.js';
 import marketRoutes from './routes/market.js';
+import pixRoutes from './routes/pix.js';
+import settingsRoutes from './routes/settings.js';
+import chatRoutes from './routes/chat.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+const APP_URL = process.env.APP_URL || 'http://localhost:3000';
 
-app.use(cors({ origin: 'http://localhost:3000', credentials: true }));
+app.use(cors({ origin: APP_URL, credentials: true }));
 app.use(express.json());
 
 app.get('/api/health', (_req, res) => {
@@ -29,6 +33,9 @@ app.use('/api/contacts', contactRoutes);
 app.use('/api/profile/keys', profileKeyRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/market', marketRoutes);
+app.use('/api/pix', pixRoutes);
+app.use('/api/settings', settingsRoutes);
+app.use('/api/chat', chatRoutes);
 
 app.use('/api', (_req, res) => {
   res.status(404).json({ error: 'Rota nao encontrada' });
@@ -36,7 +43,7 @@ app.use('/api', (_req, res) => {
 
 initDb().then(() => {
   app.listen(PORT, () => {
-    console.log(`Servidor DolarPix -> http://localhost:${PORT}`);
+    console.log(`Servidor Stellix -> http://localhost:${PORT}`);
     console.log(`Ambiente: ${process.env.NODE_ENV || 'development'}`);
     console.log(`Stellar: ${process.env.STELLAR_NETWORK || 'testnet'}`);
   });

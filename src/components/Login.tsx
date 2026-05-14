@@ -48,7 +48,7 @@ export default function Login({ onLogin, onGoToSignup, onBackToLanding }: LoginP
             <Landmark className="h-8 w-8 text-indigo-300" />
           </div>
           <h1 className="mb-2 text-3xl font-bold tracking-tight text-white">Bem-vindo de volta</h1>
-          <p className="text-sm text-white/50">Sua conta DolarPix, com a mesma simplicidade de sempre.</p>
+          <p className="text-sm text-white/50">Sua conta Stellix, com a mesma simplicidade de sempre.</p>
         </motion.div>
 
         <form onSubmit={handleSubmit} className="space-y-4">

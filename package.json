@@ -1,5 +1,5 @@
 {
-  "name": "dolarpix",
+  "name": "stellix",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -13,7 +13,9 @@
     "db:clear-transactions": "tsx server/scripts/clear-transactions.ts",
     "lint": "tsc --noEmit",
     "stellar:setup": "tsx stellar/scripts/setup-testnet.ts",
-    "stellar:test": "tsx stellar/scripts/test-transaction.ts"
+    "stellar:test": "tsx stellar/scripts/test-transaction.ts",
+    "stellar:test-sponsored": "tsx stellar/scripts/test-sponsored.ts",
+    "stellar:setup-test": "tsx stellar/scripts/setup-test-environment.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.3.0",
@@ -30,6 +32,7 @@
     "concurrently": "^9.0.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
+    "ethers": "^6.16.0",
     "express": "^4.21.2",
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.546.0",
@@ -38,6 +41,7 @@
     "qrcode.react": "^4.2.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "recharts": "^3.8.1",
     "shadcn": "^4.2.0",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.5.0",
